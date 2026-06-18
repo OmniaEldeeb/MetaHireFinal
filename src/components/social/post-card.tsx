@@ -199,14 +199,14 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const post = async () => {
-    if (!content.trim() && !media.length) return;
+    if (!content.trim()) return;  // content is required by backend
     setBusy(true);
     try {
       const fd = new FormData();
       fd.append("content", content.trim());
       fd.append("visibility", visibility);
       fd.append("type", "general");
-      media.forEach((f) => fd.append("media[]", f));
+      media.forEach((f, idx) => fd.append(`media[${idx}]`, f));
       await socialApi.createPost(fd);
       setContent("");
       setMedia([]);
@@ -227,7 +227,7 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="What's on your mind?"
+          placeholder={media.length > 0 ? "Add a caption… (required)" : "What's on your mind?"}
           rows={3}
           className="flex-1 resize-none rounded-xl border border-line bg-elevated px-3 py-2.5 text-sm outline-none focus:border-brand"
         />
@@ -290,7 +290,7 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
 
         <button
           onClick={post}
-          disabled={(!content.trim() && !media.length) || busy}
+          disabled={!content.trim() || busy}
           className="h-9 rounded-xl bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand-strong disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post"}
