@@ -149,10 +149,21 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
       {/* Media */}
       {post.media_urls?.length ? (
         <div className={`mt-3 grid gap-2 ${post.media_urls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-          {post.media_urls.map((url, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={imgUrl(url) ?? ""} alt="" className="rounded-xl object-cover w-full max-h-80" />
-          ))}
+          {post.media_urls.map((url, i) => {
+            const resolved = imgUrl(url) ?? "";
+            const isVideo = /\.(mp4|webm)(\?|$)/i.test(url);
+            return isVideo ? (
+              <video
+                key={i}
+                src={resolved}
+                controls
+                className="rounded-xl w-full max-h-80 bg-black"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={i} src={resolved} alt="" className="rounded-xl object-cover w-full max-h-80" />
+            );
+          })}
         </div>
       ) : null}
 
@@ -224,21 +235,30 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
 
       {media.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {media.map((f, i) => (
-            <div key={i} className="relative">
-              <img
-                src={URL.createObjectURL(f)}
-                alt=""
-                className="h-20 w-20 rounded-xl object-cover"
-              />
-              <button
-                onClick={() => setMedia((m) => m.filter((_, j) => j !== i))}
-                className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-coral text-white"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+          {media.map((f, i) => {
+            const isVideo = f.type.startsWith("video/");
+            const objUrl = URL.createObjectURL(f);
+            return (
+              <div key={i} className="relative">
+                {isVideo ? (
+                  <video
+                    src={objUrl}
+                    className="h-20 w-20 rounded-xl object-cover"
+                    muted
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={objUrl} alt="" className="h-20 w-20 rounded-xl object-cover" />
+                )}
+                <button
+                  onClick={() => setMedia((m) => m.filter((_, j) => j !== i))}
+                  className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-coral text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -247,12 +267,12 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
           onClick={() => fileRef.current?.click()}
           className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-muted hover:bg-elevated"
         >
-          <ImageIcon className="h-4 w-4" /> Photo
+          <ImageIcon className="h-4 w-4" /> Photo / Video
         </button>
         <input
           ref={fileRef}
           type="file"
-          accept="image/*,video/*"
+          accept="image/jpeg,image/png,image/gif,video/mp4,video/webm"
           multiple
           className="hidden"
           onChange={(e) => setMedia((m) => [...m, ...Array.from(e.target.files ?? [])])}
