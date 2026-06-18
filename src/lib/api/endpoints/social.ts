@@ -10,6 +10,9 @@ export interface PostAuthor {
   display_image?: string | null;  // AuthorResource field name (not avatar_url)
   headline?: string;
   slug?: string | null;
+  // showCandidate/showCompany posts return nested profile instead of display_image
+  candidate_profile?: { profile_image_url?: string | null; headline?: string | null } | null;
+  company?: { logo_url?: string | null; logo?: string | null } | null;
 }
 
 export interface Post {

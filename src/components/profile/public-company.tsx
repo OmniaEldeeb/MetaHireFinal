@@ -9,6 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Container } from "@/components/ui/section";
 import { profileApi } from "@/lib/api/endpoints/profile";
+import { PostCard } from "@/components/social/post-card";
+import type { Post } from "@/lib/api/endpoints/social";
 
 export function PublicCompany({ id }: { id: number }) {
   const { data, isLoading, isError } = useQuery({
@@ -25,11 +27,20 @@ export function PublicCompany({ id }: { id: number }) {
     <Container className="py-16 text-center text-sm text-muted">Company not found.</Container>
   );
 
-  // Real API: data.company = {id,name,logo_url,cover_image_url,locations:[],size,...}
+  // Real API response shape (confirmed from actual response):
+  // data.company = { id, name, slug, logo_url, cover_image_url, description, size, founded_year,
+  //                  industry, headquarters, website, locations: [{id, label, city, country, ...}] }
+  // data.stats = { followers_count, active_jobs, posts_count }
+  // data.active_jobs = [{ id, title, work_model, work_type, experience_level, salary_range }]
+  // data.posts = { data: Post[], current_page, last_page, total }
   const c = data.company;
   const stats = data.stats;
-  const jobs = data.active_jobs ?? [];
+  const jobs = (data.active_jobs ?? []) as Array<{
+    id: number; title: string; work_model?: string;
+    work_type?: string; experience_level?: string; salary_range?: string;
+  }>;
   const locations = c.locations ?? [];
+  const posts = (data.posts?.data ?? []) as Post[];
 
   return (
     <Container className="max-w-3xl py-8 space-y-6">
@@ -50,6 +61,7 @@ export function PublicCompany({ id }: { id: number }) {
               <Building2 className="h-8 w-8 text-faint" />
             )}
           </div>
+
           <h1 className="mt-4 font-display text-2xl font-extrabold tracking-tight">{c.name}</h1>
           {c.industry && <p className="mt-1 text-muted">{c.industry}</p>}
 
@@ -57,13 +69,13 @@ export function PublicCompany({ id }: { id: number }) {
           {stats && (
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted">
               {stats.followers_count !== undefined && (
-                <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{stats.followers_count} followers</span>
+                <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{stats.followers_count} followers</span>
               )}
               {stats.active_jobs !== undefined && (
-                <span className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{stats.active_jobs} open roles</span>
+                <span className="flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" />{stats.active_jobs} open roles</span>
               )}
               {stats.posts_count !== undefined && (
-                <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" />{stats.posts_count} posts</span>
+                <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" />{stats.posts_count} posts</span>
               )}
             </div>
           )}
@@ -72,10 +84,9 @@ export function PublicCompany({ id }: { id: number }) {
             {c.headquarters && (
               <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-faint" />{c.headquarters}</span>
             )}
-            {/* API returns 'size' not 'size_enum' in public profile response */}
             {(c as { size?: string | null }).size && (
               <span className="flex items-center gap-1.5">
-                <Users className="h-4 w-4 text-faint" />{(c as { size?: string }).size} employees
+                <Users className="h-4 w-4 text-faint" />{(c as { size: string }).size} employees
               </span>
             )}
             {c.founded_year && (
@@ -121,17 +132,14 @@ export function PublicCompany({ id }: { id: number }) {
         <section className="rounded-2xl border border-line bg-surface p-6">
           <h2 className="font-display text-base font-bold tracking-tight">Open roles</h2>
           <ul className="mt-4 space-y-3">
-            {(jobs as Array<{
-              id: number; title: string; work_model?: string;
-              work_type?: string; experience_level?: string; salary_range?: string;
-            }>).map((job) => (
+            {jobs.map((job) => (
               <li key={job.id}>
                 <Link href={`/jobs/${job.id}`}
                   className="block rounded-xl border border-line bg-elevated p-4 hover:border-brand transition-colors">
                   <p className="text-sm font-semibold">{job.title}</p>
                   <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted">
-                    {job.work_model && <span className="capitalize">{job.work_model.replace("_", " ")}</span>}
-                    {job.work_type && <span className="capitalize">{job.work_type.replace("_", " ")}</span>}
+                    {job.work_model && <span className="capitalize">{job.work_model.replace(/_/g, " ")}</span>}
+                    {job.work_type && <span className="capitalize">{job.work_type.replace(/_/g, " ")}</span>}
                     {job.experience_level && <span>{job.experience_level}</span>}
                     {job.salary_range && <span className="text-brand">{job.salary_range}</span>}
                   </div>
@@ -139,6 +147,18 @@ export function PublicCompany({ id }: { id: number }) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Posts */}
+      {posts.length > 0 && (
+        <section>
+          <h2 className="mb-4 font-display text-base font-bold tracking-tight">Posts</h2>
+          <div className="space-y-4">
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
         </section>
       )}
     </Container>

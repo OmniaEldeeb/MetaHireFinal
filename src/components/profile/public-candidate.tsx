@@ -8,6 +8,8 @@ import {
 import { Container } from "@/components/ui/section";
 import { profileApi } from "@/lib/api/endpoints/profile";
 import { useQuery } from "@tanstack/react-query";
+import { PostCard } from "@/components/social/post-card";
+import type { Post } from "@/lib/api/endpoints/social";
 
 function fmt(d?: string) {
   if (!d) return "";
@@ -43,10 +45,15 @@ export function PublicCandidate({ id }: { id: number }) {
     <Container className="py-16 text-center text-sm text-muted">Profile not found.</Container>
   );
 
-  // Real API: data.user = {id,name,role}, data.profile = {headline,bio,...,profile_image_url}
+  // Real API response shape (confirmed from actual response):
+  // data.user = { id, name, role, profile_url }
+  // data.profile = { headline, bio, location, skills, profile_image_url, linkedin_url, ... }
+  // data.stats = { connections_count, posts_count }
+  // data.posts = { data: Post[], current_page, last_page, total }
   const u = data.user;
   const p = data.profile ?? {};
   const stats = data.stats;
+  const posts = (data.posts?.data ?? []) as Post[];
 
   return (
     <Container className="max-w-3xl py-8">
@@ -76,24 +83,20 @@ export function PublicCandidate({ id }: { id: number }) {
                 <MapPin className="h-3.5 w-3.5" />{p.location}
               </p>
             )}
-            {/* Stats */}
             {stats && (
               <div className="mt-3 flex items-center gap-4 text-sm text-muted">
                 {stats.connections_count !== undefined && (
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" />
-                    {stats.connections_count} connections
+                  <span className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" />{stats.connections_count} connections
                   </span>
                 )}
                 {stats.posts_count !== undefined && (
-                  <span className="flex items-center gap-1">
-                    <FileText className="h-3.5 w-3.5" />
-                    {stats.posts_count} posts
+                  <span className="flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />{stats.posts_count} posts
                   </span>
                 )}
               </div>
             )}
-            {/* Social links */}
             <div className="mt-3 flex gap-2">
               {p.linkedin_url && (
                 <a href={p.linkedin_url} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
@@ -117,7 +120,7 @@ export function PublicCandidate({ id }: { id: number }) {
           </div>
         </div>
         {p.bio && <p className="mt-5 text-sm leading-relaxed text-muted whitespace-pre-line">{p.bio}</p>}
-        {p.skills?.length ? (
+        {(p.skills as string[] | undefined)?.length ? (
           <div className="mt-5 flex flex-wrap gap-1.5">
             {(p.skills as string[]).map((s) => (
               <span key={s} className="rounded-lg bg-brand-soft px-2.5 py-1 text-sm text-brand">{s}</span>
@@ -126,6 +129,7 @@ export function PublicCandidate({ id }: { id: number }) {
         ) : null}
       </div>
 
+      {/* CV sections */}
       <div className="mt-6 space-y-6">
         {(p.experience as { title?: string; company?: string; start_date?: string; end_date?: string; description?: string }[] | undefined)?.length ? (
           <Block icon={Briefcase} title="Experience">
@@ -181,6 +185,18 @@ export function PublicCandidate({ id }: { id: number }) {
             ))}
           </Block>
         ) : null}
+
+        {/* Posts */}
+        {posts.length > 0 && (
+          <section>
+            <h2 className="mb-4 font-display text-lg font-bold tracking-tight">Posts</h2>
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </Container>
   );

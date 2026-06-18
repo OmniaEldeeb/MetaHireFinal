@@ -37,9 +37,13 @@ function timeAgo(iso?: string) {
 // 2. showCandidate plain: { id, name, candidate_profile: { profile_image_url } }
 function authorImage(author: Post["author"]): string | null {
   if (!author) return null;
+  // AuthorResource shape: display_image
   if (author.display_image) return author.display_image;
-  const cp = (author as { candidate_profile?: { profile_image_url?: string } }).candidate_profile;
-  return cp?.profile_image_url ?? null;
+  // showCandidate posts: candidate_profile.profile_image_url
+  if (author.candidate_profile?.profile_image_url) return author.candidate_profile.profile_image_url;
+  // showCompany posts: company.logo_url
+  if (author.company?.logo_url) return author.company.logo_url;
+  return null;
 }
 function authorName(author: Post["author"]): string {
   if (!author) return "?";
