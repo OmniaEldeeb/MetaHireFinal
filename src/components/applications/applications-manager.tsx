@@ -1,5 +1,4 @@
 "use client";
-import { imgUrl } from "@/lib/utils";
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";

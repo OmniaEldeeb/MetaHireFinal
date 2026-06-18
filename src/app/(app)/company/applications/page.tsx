@@ -1,5 +1,4 @@
 "use client";
-import { imgUrl } from "@/lib/utils";
 
 /**
  * All applicants — company cross-job view.
