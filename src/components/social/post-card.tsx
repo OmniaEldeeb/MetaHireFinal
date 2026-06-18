@@ -211,8 +211,12 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
       setContent("");
       setMedia([]);
       onCreated?.();
-    } catch {
-      toast({ kind: "error", title: "Couldn't post" });
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string; fieldErrors?: Record<string, string[]> };
+      const detail = apiErr?.fieldErrors
+        ? Object.values(apiErr.fieldErrors).flat().join(" ")
+        : apiErr?.message;
+      toast({ kind: "error", title: "Couldn't post", message: detail });
     } finally {
       setBusy(false);
     }
