@@ -7,8 +7,9 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Building2, MapPin, Clock, Loader2,
-  CheckCircle2, CalendarClock, Bookmark,
+  CheckCircle2, CalendarClock, Bookmark, BookmarkCheck,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Container } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { jobsApi, normalizeJob } from "@/lib/api/endpoints/jobs";
@@ -26,6 +27,9 @@ export function JobDetail({ id }: { id: number }) {
   const toast = useToastStore((s) => s.push);
   const [applyOpen, setApplyOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Determine initial saved state from cached saved-jobs list (no extra request)
+  const cachedSavedJobs = qc.getQueryData<{ id: number }[]>(["saved-jobs"]) ?? [];
+  const [isSaved, setIsSaved] = useState<boolean | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["job", id],
@@ -52,14 +56,23 @@ export function JobDetail({ id }: { id: number }) {
     job.experience_level ? EXPERIENCE_LEVEL_LABELS[job.experience_level as ExperienceLevel] : null,
   ].filter(Boolean) as string[];
 
+  // Resolve actual saved state: explicit toggle > cache lookup > false
+  const savedState = isSaved !== null
+    ? isSaved
+    : cachedSavedJobs.some((j) => j.id === id);
+
   const save = async () => {
     if (status !== "authenticated") return;
     setSaving(true);
+    // Optimistic update
+    setIsSaved(!savedState);
     try {
       const res = await candidateApplicationsApi.saveJob(id);
+      setIsSaved(res.saved);
       qc.invalidateQueries({ queryKey: ["saved-jobs"] });
-      toast({ kind: "success", title: res.saved ? "Job saved" : "Job unsaved" });
+      toast({ kind: "success", title: res.saved ? "Job saved" : "Job removed from saved" });
     } catch {
+      setIsSaved(savedState); // revert on error
       toast({ kind: "error", title: "Couldn't save job" });
     } finally {
       setSaving(false);
@@ -110,10 +123,21 @@ export function JobDetail({ id }: { id: number }) {
             <button
               onClick={save}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-line2 bg-surface px-4 py-2.5 text-sm font-medium text-muted hover:border-brand hover:text-brand disabled:opacity-50"
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50",
+                savedState
+                  ? "border-brand bg-brand-soft text-brand"
+                  : "border-line2 bg-surface text-muted hover:border-brand hover:text-brand"
+              )}
             >
-              <Bookmark className="h-4 w-4" />
-              {saving ? "Saving…" : "Save job"}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : savedState ? (
+                <BookmarkCheck className="h-4 w-4 fill-current" />
+              ) : (
+                <Bookmark className="h-4 w-4" />
+              )}
+              {saving ? "Saving…" : savedState ? "Saved" : "Save job"}
             </button>
           )}
         </div>
