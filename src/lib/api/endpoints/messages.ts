@@ -18,10 +18,10 @@ export interface LatestMessage {
 
 export interface Conversation {
   id: number;
-  last_message_at?: string;
+  last_message_at?: string | null;
   unread_count?: number;
   other_user?: OtherUser;
-  latest_message?: LatestMessage;
+  latest_message?: LatestMessage | null;
 }
 
 export interface Message {

@@ -177,6 +177,10 @@ export function CvManager() {
                   isFavorite={favoriteIds.has(cv.id)}
                   inTrash={tab === "trash"}
                   onViewReport={setReportCvId}
+                  onRestore={tab === "trash" ? (id) => {
+                    qc.invalidateQueries({ queryKey: ["cvs"] });
+                    qc.invalidateQueries({ queryKey: ["cv-trash"] });
+                  } : undefined}
                 />
               </div>
             ))}

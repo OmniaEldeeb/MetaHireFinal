@@ -29,7 +29,7 @@ export function InterviewController() {
   useEffect(() => {
     const orch = getOrchestrator();
     const unsub = orch.subscribe(setOrchState);
-    return unsub;
+    return () => { unsub(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

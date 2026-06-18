@@ -97,6 +97,18 @@ export const cvApi = {
     ),
 
   get: (id: number) => api.get<Cv>(`/cv/${id}`),
+
+  // GET /cv/{id} — full detail: { cv, display, latest_analysis, latest_score }
+  show: (id: number) => api.get<{
+    cv: Cv;
+    display?: Record<string, unknown>;
+    latest_analysis?: Record<string, unknown> | null;
+    latest_score?: Record<string, unknown> | null;
+  }>(`/cv/${id}`),
+
+  // PATCH /cv/{id} — update CV parsed_data (edit CV content)
+  update: (id: number, body: { parsed_data?: Record<string, unknown>; name?: string }) =>
+    api.patch<Cv>(`/cv/${id}`, body),
   upload: (file: File, useAi = false) => {
     const fd = new FormData();
     fd.append("file", file);

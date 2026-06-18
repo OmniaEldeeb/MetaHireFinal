@@ -32,6 +32,20 @@ function timeAgo(iso?: string) {
 }
 
 // ── Post card ────────────────────────────────────────────────────────────────
+// Normalize author across both shapes:
+// 1. AuthorResource: { id, role, name, display_name, display_image, headline }
+// 2. showCandidate plain: { id, name, candidate_profile: { profile_image_url } }
+function authorImage(author: Post["author"]): string | null {
+  if (!author) return null;
+  if (author.display_image) return author.display_image;
+  const cp = (author as { candidate_profile?: { profile_image_url?: string } }).candidate_profile;
+  return cp?.profile_image_url ?? null;
+}
+function authorName(author: Post["author"]): string {
+  if (!author) return "?";
+  return author.name ?? author.display_name ?? "?";
+}
+
 export function PostCard({ post, onView }: { post: Post; onView?: (id: number) => void }) {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
@@ -70,9 +84,9 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
             : null;
           const avatar = (
             <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated text-sm font-bold text-brand">
-              {post.author?.display_image
-                ? <img src={imgUrl(post.author.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
-                : post.author?.name?.charAt(0) ?? "?"}
+              {authorImage(post.author)
+                ? <img src={imgUrl(authorImage(post.author)) ?? ""} alt="" className="h-full w-full object-cover" />
+                : authorName(post.author).charAt(0)}
             </span>
           );
           return authorHref ? (
@@ -88,10 +102,10 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
               : null;
             return authorHref ? (
               <Link href={authorHref} className="text-sm font-semibold hover:underline">
-                {post.author?.name}
+                {authorName(post.author)}
               </Link>
             ) : (
-              <p className="text-sm font-semibold">{post.author?.name}</p>
+              <p className="text-sm font-semibold">{authorName(post.author)}</p>
             );
           })()}
           <div className="flex items-center gap-1.5 text-xs text-faint">

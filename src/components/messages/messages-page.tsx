@@ -377,7 +377,7 @@ function ConversationList({
                       {conv.other_user?.display_name ?? "User"}
                     </p>
                     <span className="readout text-[0.65rem] text-faint">
-                      {timeAgo(conv.last_message_at)}
+                      {timeAgo(conv.last_message_at ?? undefined)}
                     </span>
                   </div>
                   <p className="truncate text-xs text-muted">
