@@ -366,9 +366,9 @@ export function SavedJobsManager() {
                 className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-brand/40"
               >
                 <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-elevated">
-                  {job.company?.logo_url ? (
+                  {(job.company?.logo_url || (job.company as { logo?: string } | undefined)?.logo) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
+                    <img src={imgUrl(job.company?.logo_url ?? (job.company as { logo?: string } | undefined)?.logo) ?? ""} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <Briefcase className="h-5 w-5 text-faint" />
                   )}

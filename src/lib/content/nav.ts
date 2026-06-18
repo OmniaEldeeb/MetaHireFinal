@@ -29,6 +29,7 @@ export const CANDIDATE_NAV: NavItem[] = [
   { label: "Browse jobs", href: "/jobs", icon: Briefcase },
   { label: "Applications", href: "/applications", icon: FileText },
   { label: "Saved jobs", href: "/saved-jobs", icon: Bookmark },
+  { label: "Saved posts", href: "/saved-posts", icon: Bookmark },
   { label: "My CVs", href: "/cv", icon: Files },
   { label: "Interviews", href: "/interviews", icon: Mic },
   { label: "Feed", href: "/feed", icon: Newspaper },

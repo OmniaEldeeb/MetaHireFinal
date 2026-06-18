@@ -49,14 +49,23 @@ export const candidateApplicationsApi = {
     api.post<{ saved: boolean }>(`/jobs/${jobId}/save`),
   savedJobs: () =>
     api.get<unknown>("/candidate/saved-jobs").then((r) => {
-      // SavedJobController returns { saved_jobs: Paginated<SavedJob> }
-      if (r && typeof r === "object" && "saved_jobs" in (r as object)) {
-        const v = (r as Record<string, unknown>).saved_jobs;
-        if (Array.isArray(v)) return v as Job[];
-        return ((v as { data?: Job[] })?.data ?? []) as Job[];
-      }
-      if (Array.isArray(r)) return r as Job[];
-      return ((r as { data?: Job[] })?.data ?? []) as Job[];
+      // SavedJobController returns { saved_jobs: Paginated<{ id, job_id, job: JobResource, created_at }> }
+      // Each item is a SavedJob record; the actual job is in item.job
+      const obj = (r ?? {}) as Record<string, unknown>;
+      const savedObj = obj.saved_jobs ?? r;
+      const rows: unknown[] = Array.isArray(savedObj)
+        ? savedObj
+        : ((savedObj as { data?: unknown[] })?.data ?? []);
+      // Extract the nested .job from each SavedJob record
+      return rows
+        .map((item) => {
+          const it = item as Record<string, unknown>;
+          // If item already looks like a Job (has title), return as-is
+          if (it.title) return it as unknown as Job;
+          // Otherwise extract the nested .job property
+          return (it.job ?? it) as unknown as Job;
+        })
+        .filter((j) => j && (j as Job).id) as Job[];
     }),
   finalSchedule: (appId: number) =>
     api.get<unknown>(`/candidate/applications/${appId}/final-schedule`),
