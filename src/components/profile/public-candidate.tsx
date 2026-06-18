@@ -9,6 +9,7 @@ import { Container } from "@/components/ui/section";
 import { profileApi } from "@/lib/api/endpoints/profile";
 import { useQuery } from "@tanstack/react-query";
 import { PostCard } from "@/components/social/post-card";
+import { ProfileActions } from "./profile-actions";
 import type { Post } from "@/lib/api/endpoints/social";
 
 function fmt(d?: string) {
@@ -120,6 +121,13 @@ export function PublicCandidate({ id }: { id: number }) {
           </div>
         </div>
         {p.bio && <p className="mt-5 text-sm leading-relaxed text-muted whitespace-pre-line">{p.bio}</p>}
+
+        {/* Connect + Message buttons */}
+        <ProfileActions
+          userId={u.id}
+          isCompany={false}
+          initialStatus={data.connection_status ?? null}
+        />
         {(p.skills as string[] | undefined)?.length ? (
           <div className="mt-5 flex flex-wrap gap-1.5">
             {(p.skills as string[]).map((s) => (

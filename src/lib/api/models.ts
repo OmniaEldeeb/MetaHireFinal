@@ -54,15 +54,26 @@ export interface ProfileUser {
 
 export interface Company {
   id: number;
+  user_id?: number;        // owner's user ID — used to connect/follow/message the company
   name: string;
+  slug?: string | null;
   industry?: string;
   headquarters?: string;
+  country?: string | null;
+  city?: string | null;
   website?: string;
   description?: string;
-  size?: string;
+  tagline?: string | null;
+  size?: string | null;
+  size_enum?: string | null;
   founded_year?: number;
   logo_url?: string | null;
   cover_image_url?: string | null;
+  linkedin_url?: string | null;
+  twitter_url?: string | null;
+  phone?: string | null;
+  is_verified?: boolean;
+  is_active?: boolean;
 }
 
 export interface CompanyLocation {

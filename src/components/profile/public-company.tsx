@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/section";
 import { profileApi } from "@/lib/api/endpoints/profile";
 import { PostCard } from "@/components/social/post-card";
+import { ProfileActions } from "./profile-actions";
 import type { Post } from "@/lib/api/endpoints/social";
 
 export function PublicCompany({ id }: { id: number }) {
@@ -103,6 +104,13 @@ export function PublicCompany({ id }: { id: number }) {
           {c.description && (
             <p className="mt-5 text-sm leading-relaxed text-muted">{c.description}</p>
           )}
+
+          {/* Follow + Message buttons — userId is the company's owner user_id */}
+          <ProfileActions
+            userId={c.user_id ?? 0}
+            isCompany={true}
+            initialStatus={data.is_following ? "following" : "none"}
+          />
         </div>
       </div>
 

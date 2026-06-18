@@ -68,6 +68,11 @@ export const networkApi = {
     api.get<unknown>("/network/suggestions")
       .then((r) => extractKey<NetworkSuggestion>(r, "suggestions")),
 
+  // GET /network/status/{user} → { status, connection_id }
+  // status: none|pending_sent|pending_received|connected|following|followed_by|self
+  status: (userId: number) =>
+    api.get<{ status: string; connection_id: number | null }>(`/network/status/${userId}`),
+
   connect: (userId: number) =>
     api.post<{ type: string; status: string }>(`/network/connect/${userId}`),
 
