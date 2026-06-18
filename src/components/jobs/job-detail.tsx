@@ -29,13 +29,13 @@ export function JobDetail({ id }: { id: number }) {
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState<boolean | null>(null);
 
-  // Always fetch saved-jobs so we know if this job is saved after a page refresh.
-  // Uses the same queryKey ["saved-jobs"] so it's shared with the saved-jobs page cache.
-  const savedJobsQ = useQuery({
-    queryKey: ["saved-jobs"],
-    queryFn: candidateApplicationsApi.savedJobs,
+  // Fetch only saved job IDs — lightweight, fast, used only to check saved state.
+  // staleTime: 5min so navigating between jobs reuses the same result.
+  const savedIdsQ = useQuery({
+    queryKey: ["saved-job-ids"],
+    queryFn: candidateApplicationsApi.savedJobIds,
     enabled: status === "authenticated" && role === "candidate",
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 
   const { data, isLoading, isError } = useQuery({
@@ -63,11 +63,11 @@ export function JobDetail({ id }: { id: number }) {
     job.experience_level ? EXPERIENCE_LEVEL_LABELS[job.experience_level as ExperienceLevel] : null,
   ].filter(Boolean) as string[];
 
-  // Resolve saved state: explicit toggle overrides > fetched list > false
-  const fetchedSavedJobs = savedJobsQ.data ?? [];
+  // Resolve saved state: explicit toggle overrides > fetched ID list > false
+  const savedIds = savedIdsQ.data ?? [];
   const savedState = isSaved !== null
     ? isSaved
-    : fetchedSavedJobs.some((j) => j.id === id);
+    : savedIds.includes(id);
 
   const save = async () => {
     if (status !== "authenticated") return;
@@ -78,6 +78,7 @@ export function JobDetail({ id }: { id: number }) {
       const res = await candidateApplicationsApi.saveJob(id);
       setIsSaved(res.saved);
       qc.invalidateQueries({ queryKey: ["saved-jobs"] });
+      qc.invalidateQueries({ queryKey: ["saved-job-ids"] });
       toast({ kind: "success", title: res.saved ? "Job saved" : "Job removed from saved" });
     } catch {
       setIsSaved(savedState); // revert on error

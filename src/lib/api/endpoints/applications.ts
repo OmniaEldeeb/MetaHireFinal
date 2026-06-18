@@ -47,6 +47,22 @@ export const candidateApplicationsApi = {
     api.post<Application>(`/jobs/${jobId}/apply`, body),
   saveJob: (jobId: number) =>
     api.post<{ saved: boolean }>(`/jobs/${jobId}/save`),
+  // Lightweight: fetch saved job IDs only — used to check saved state on job detail page
+  // Much faster than savedJobs() because we only need the ID from each SavedJob record
+  savedJobIds: () =>
+    api.get<unknown>("/candidate/saved-jobs?per_page=100").then((r) => {
+      const obj = (r ?? {}) as Record<string, unknown>;
+      const savedObj = obj.saved_jobs ?? r;
+      const rows: unknown[] = Array.isArray(savedObj)
+        ? savedObj
+        : ((savedObj as { data?: unknown[] })?.data ?? []);
+      return rows.map((item) => {
+        const it = item as Record<string, unknown>;
+        // Extract job_id from SavedJob record or id from Job record
+        return Number((it.job as Record<string, unknown>)?.id ?? it.job_id ?? it.id ?? 0);
+      }).filter(Boolean) as number[];
+    }),
+
   savedJobs: () =>
     api.get<unknown>("/candidate/saved-jobs").then((r) => {
       // SavedJobController returns { saved_jobs: Paginated<{ id, job_id, job: JobResource, created_at }> }
