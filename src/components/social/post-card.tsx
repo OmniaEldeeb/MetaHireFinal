@@ -6,7 +6,7 @@ import { useState, useRef } from "react";
 import { useIntersectionObserver } from "@/lib/hooks/use-intersection";
 import {
   Image as ImageIcon, X, Globe, Users, Lock,
-  MoreVertical, Trash2, Loader2, Pencil, Check,
+  MoreVertical, Trash2, Loader2, Pencil, Check, Bookmark,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socialApi, type Post } from "@/lib/api/endpoints/social";
@@ -79,6 +79,24 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
     (post.visibility as "public" | "connections" | "private") ?? "public"
   );
   const [saving, setSaving] = useState(false);
+  const [bookmarked, setBookmarked] = useState(post.is_saved ?? false);
+  const [bookmarking, setBookmarking] = useState(false);
+
+  const toggleSave = async () => {
+    if (bookmarking) return;
+    setBookmarking(true);
+    setBookmarked((v) => !v); // optimistic
+    try {
+      const res = await socialApi.savePost(post.id);
+      setBookmarked(res.saved);
+      toast({ kind: "success", title: res.saved ? "Post saved" : "Post unsaved" });
+    } catch {
+      setBookmarked((v) => !v); // revert
+      toast({ kind: "error", title: "Couldn't save post" });
+    } finally {
+      setBookmarking(false);
+    }
+  };
 
   const saveEdit = async () => {
     if (!editContent.trim()) return;
@@ -140,30 +158,42 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
             <span>{timeAgo(post.created_at)}</span>
           </div>
         </div>
-        {isOwn && (
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:bg-elevated hover:text-ink"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-xl border border-line2 bg-surface shadow-lift">
-                  <button onClick={() => { setMenuOpen(false); setIsEditing(true); }}
-                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-elevated">
-                    <Pencil className="h-4 w-4" /> Edit
-                  </button>
-                  <button onClick={del} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-coral hover:bg-elevated">
-                    <Trash2 className="h-4 w-4" /> Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        {/* Three-dots menu — visible for all posts */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:bg-elevated hover:text-ink"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-xl border border-line2 bg-surface shadow-lift">
+                {/* Save/Unsave — available for all posts */}
+                <button
+                  onClick={() => { setMenuOpen(false); toggleSave(); }}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-elevated"
+                >
+                  <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-current text-brand" : ""}`} />
+                  {bookmarked ? "Unsave" : "Save post"}
+                </button>
+                {/* Edit & Delete — only for own posts */}
+                {isOwn && (
+                  <>
+                    <button onClick={() => { setMenuOpen(false); setIsEditing(true); }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-elevated">
+                      <Pencil className="h-4 w-4" /> Edit
+                    </button>
+                    <button onClick={del} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-coral hover:bg-elevated">
+                      <Trash2 className="h-4 w-4" /> Delete
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Content — edit mode or display mode */}
@@ -285,7 +315,8 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
           reactionCount={post.reactions_count}
           commentCount={post.comments_count}
           shareCount={post.shares_count}
-          saved={post.is_saved}
+          saved={bookmarked}
+          onSave={toggleSave}
           onComment={() => setShowComments((v) => !v)}
         />
       </div>

@@ -518,6 +518,7 @@ export function ReactionBar({
   commentCount,
   shareCount,
   onComment,
+  onSave,
   saved,
 }: {
   postId: number;
@@ -526,6 +527,7 @@ export function ReactionBar({
   commentCount?: number;
   shareCount?: number;
   onComment?: () => void;
+  onSave?: () => void;   // when provided, delegates save to post-card (keeps state in sync)
   saved?: boolean;
 }) {
   const toast = useToastStore((s) => s.push);
@@ -562,8 +564,17 @@ export function ReactionBar({
     setReacting(false);
   };
 
+  // Sync bookmarked from parent when prop changes (e.g. toggled via menu)
+  useEffect(() => { setBookmarked(saved ?? false); }, [saved]);
+
   const save = async () => {
     if (saving) return;
+    if (onSave) {
+      // Delegate to post-card which owns the state
+      onSave();
+      setBookmarked((v) => !v); // mirror optimistic update
+      return;
+    }
     setSaving(true);
     try {
       const res = await socialApi.savePost(postId);
