@@ -20,7 +20,73 @@ const REACTION_COLORS: Record<string, string> = {
   support: "text-green", funny: "text-amber",
 };
 
-// ── Who reacted popup ─────────────────────────────────────────────────────────
+// ── Who reposted popup ───────────────────────────────────────────────────────
+function ShareUsersModal({ postId, total, onClose }: { postId: number; total: number; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["share-users", postId],
+    queryFn: () => socialApi.shareUsers(postId),
+    staleTime: 30_000,
+  });
+
+  const reposts = (data?.reposts as Array<{
+    user: { id: number; role: string; display_name: string; display_image?: string | null; headline?: string | null };
+    comment?: string | null;
+    reposted_at: string;
+    post_id: number;
+  }>) ?? [];
+
+  return (
+    <div
+      className="fixed inset-0 z-[400] flex items-end justify-center sm:items-center bg-black/50 backdrop-blur-sm px-4"
+      onClick={onClose}
+    >
+      <div
+        className="modal-in w-full max-w-sm overflow-hidden rounded-3xl border border-line2 bg-surface shadow-lift mb-4 sm:mb-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h3 className="font-display text-sm font-bold tracking-tight">
+            {total} Repost{total !== 1 ? "s" : ""}
+          </h3>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:text-ink">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-72 overflow-y-auto">
+          {isLoading ? (
+            <div className="grid place-items-center py-10"><Loader2 className="h-5 w-5 animate-spin text-brand" /></div>
+          ) : reposts.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted">No reposts yet</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {reposts.map((r, i) => {
+                const href = r.user.role === "company" ? `/companies/${r.user.id}` : `/users/${r.user.id}`;
+                return (
+                  <li key={i} className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <a href={href} className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-elevated">
+                        {r.user.display_image
+                          ? <img src={imgUrl(r.user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                          : <span className="text-sm font-bold text-brand">{r.user.display_name?.charAt(0)}</span>}
+                      </a>
+                      <div className="min-w-0 flex-1">
+                        <a href={href} className="truncate text-sm font-medium hover:underline block">{r.user.display_name}</a>
+                        {r.user.headline && <p className="truncate text-xs text-muted">{r.user.headline}</p>}
+                      </div>
+                    </div>
+                    {r.comment && (
+                      <p className="mt-1.5 pl-12 text-xs text-muted line-clamp-2">{r.comment}</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 function ReactionsModal({ postId, onClose }: { postId: number; onClose: () => void }) {
   const [tab, setTab] = useState("all");
 
@@ -438,6 +504,7 @@ export function ReactionBar({
   myReaction,
   reactionCount,
   commentCount,
+  shareCount,
   onComment,
   saved,
 }: {
@@ -445,6 +512,7 @@ export function ReactionBar({
   myReaction?: ReactionType | null;
   reactionCount?: number;
   commentCount?: number;
+  shareCount?: number;
   onComment?: () => void;
   saved?: boolean;
 }) {
@@ -455,6 +523,7 @@ export function ReactionBar({
   const [bookmarked, setBookmarked] = useState(saved ?? false);
   const [showShare, setShowShare]  = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [showShareUsers, setShowShareUsers] = useState(false);
   const [reacting, setReacting]   = useState(false);
   const [saving, setSaving]       = useState(false);
 
@@ -497,15 +566,14 @@ export function ReactionBar({
 
   return (
     <>
-      {/* ── Counts row (like Facebook: "👍❤️⭐ 3  · 2 comments") ── */}
-      {(count > 0 || (commentCount ?? 0) > 0) && (
+      {/* ── Counts row (like Facebook: "👍❤️⭐ 3  · 2 comments · 1 share") ── */}
+      {(count > 0 || (commentCount ?? 0) > 0 || (shareCount ?? 0) > 0) && (
         <div className="flex items-center justify-between border-t border-line pt-2 pb-1 text-xs text-muted">
           {count > 0 ? (
             <button
               onClick={() => setShowReactions(true)}
               className="flex items-center gap-1 hover:underline"
             >
-              {/* Show up to 3 distinct reaction type icons */}
               <span className="flex">
                 {REACTIONS.filter((r) => r.type === current || true)
                   .slice(0, 3)
@@ -517,11 +585,18 @@ export function ReactionBar({
               {count}
             </button>
           ) : <span />}
-          {(commentCount ?? 0) > 0 && (
-            <button onClick={onComment} className="hover:underline">
-              {commentCount} comment{(commentCount ?? 0) !== 1 ? "s" : ""}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {(commentCount ?? 0) > 0 && (
+              <button onClick={onComment} className="hover:underline">
+                {commentCount} comment{(commentCount ?? 0) !== 1 ? "s" : ""}
+              </button>
+            )}
+            {(shareCount ?? 0) > 0 && (
+              <button onClick={() => setShowShareUsers(true)} className="hover:underline">
+                {shareCount} share{(shareCount ?? 0) !== 1 ? "s" : ""}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -597,6 +672,10 @@ export function ReactionBar({
 
       {showReactions && (
         <ReactionsModal postId={postId} onClose={() => setShowReactions(false)} />
+      )}
+
+      {showShareUsers && (
+        <ShareUsersModal postId={postId} total={shareCount ?? 0} onClose={() => setShowShareUsers(false)} />
       )}
     </>
   );
