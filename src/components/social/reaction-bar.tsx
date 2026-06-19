@@ -497,34 +497,53 @@ export function ReactionBar({
 
   return (
     <>
-      <div className="flex items-center gap-1 border-t border-line pt-3">
-        {/* Reaction */}
-        <div className="relative">
+      {/* ── Counts row (like Facebook: "👍❤️⭐ 3  · 2 comments") ── */}
+      {(count > 0 || (commentCount ?? 0) > 0) && (
+        <div className="flex items-center justify-between border-t border-line pt-2 pb-1 text-xs text-muted">
+          {count > 0 ? (
+            <button
+              onClick={() => setShowReactions(true)}
+              className="flex items-center gap-1 hover:underline"
+            >
+              {/* Show up to 3 distinct reaction type icons */}
+              <span className="flex">
+                {REACTIONS.filter((r) => r.type === current || true)
+                  .slice(0, 3)
+                  .map((r) => (
+                    <r.icon key={r.type} className={cn("h-3.5 w-3.5 -ml-0.5 first:ml-0", r.color)} />
+                  ))
+                  .slice(0, 1)}
+              </span>
+              {count}
+            </button>
+          ) : <span />}
+          {(commentCount ?? 0) > 0 && (
+            <button onClick={onComment} className="hover:underline">
+              {commentCount} comment{(commentCount ?? 0) !== 1 ? "s" : ""}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Actions row: Like · Comment · Share · Save — equal width like Facebook ── */}
+      <div className="relative flex items-center border-t border-line pt-1">
+        {/* Like button — full emoji picker on hover */}
+        <div className="relative flex-1">
           <button
             onMouseEnter={() => !reacting && setShowPicker(true)}
             onMouseLeave={() => setShowPicker(false)}
             onClick={() => (current ? react(current) : setShowPicker((v) => !v))}
             disabled={reacting}
             className={cn(
-              "flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-elevated disabled:opacity-60",
+              "flex w-full h-9 items-center justify-center gap-1.5 rounded-xl text-sm font-medium transition-colors hover:bg-elevated disabled:opacity-60",
               active ? active.color : "text-muted",
             )}
           >
             {reacting ? <Loader2 className="h-4 w-4 animate-spin" />
               : active ? <active.icon className="h-4 w-4" />
               : <ThumbsUp className="h-4 w-4" />}
-            <span>{active ? active.label : "React"}</span>
+            <span className="hidden sm:inline">{active ? active.label : "Like"}</span>
           </button>
-
-          {/* Clickable reaction count — opens who reacted modal */}
-          {count > 0 && (
-            <button
-              onClick={() => setShowReactions(true)}
-              className="flex h-9 items-center px-1.5 text-sm text-muted hover:text-ink hover:underline"
-            >
-              {count}
-            </button>
-          )}
 
           {showPicker && !reacting && (
             <div
@@ -547,27 +566,28 @@ export function ReactionBar({
 
         {/* Comment */}
         <button onClick={onComment}
-          className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-muted hover:bg-elevated">
+          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-medium text-muted hover:bg-elevated">
           <MessageSquare className="h-4 w-4" />
-          {commentCount ? commentCount : "Comment"}
+          <span className="hidden sm:inline">Comment</span>
         </button>
 
         {/* Share */}
         <button onClick={() => setShowShare(true)}
-          className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-muted hover:bg-elevated">
+          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-medium text-muted hover:bg-elevated">
           <Share2 className="h-4 w-4" />
-          Share
+          <span className="hidden sm:inline">Share</span>
         </button>
 
-        {/* Bookmark */}
+        {/* Save / Bookmark */}
         <button onClick={save} disabled={saving}
           className={cn(
-            "ml-auto flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-elevated disabled:opacity-60",
+            "flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-medium transition-colors hover:bg-elevated disabled:opacity-60",
             bookmarked ? "text-brand" : "text-muted",
           )}>
           {saving
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : <Bookmark className={cn("h-4 w-4", bookmarked && "fill-current")} />}
+          <span className="hidden sm:inline">Save</span>
         </button>
       </div>
 
