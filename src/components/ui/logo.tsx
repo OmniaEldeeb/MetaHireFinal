@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export function Logo({
@@ -8,7 +9,7 @@ export function Logo({
   href?: string;
 }) {
   return (
-    <a
+    <Link
       href={href}
       className={cn(
         "inline-flex items-baseline font-display font-extrabold tracking-tight",
@@ -20,6 +21,6 @@ export function Logo({
         M
       </span>
       <span className="text-[1.375rem] text-ink">etaHire</span>
-    </a>
+    </Link>
   );
 }

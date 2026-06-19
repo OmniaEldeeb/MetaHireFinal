@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignalReadout } from "@/components/landing/signal-readout";
@@ -37,11 +36,7 @@ export default function AuthLayout({
 
       {/* Form panel */}
       <main id="main-content" className="flex flex-col">
-        <div className="flex items-center justify-between p-5 sm:p-8">
-          <Link href="/" className="lg:hidden">
-            <Logo />
-          </Link>
-          <span className="hidden lg:block" />
+        <div className="flex items-center justify-end p-5 sm:p-8">
           <ThemeToggle />
         </div>
         <div className="flex flex-1 items-center justify-center px-5 pb-12 sm:px-8">
