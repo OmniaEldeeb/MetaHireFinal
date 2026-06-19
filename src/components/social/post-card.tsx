@@ -71,7 +71,8 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
     }
   };
 
-  const isOwn = post.author?.id === user?.id;
+  // isOwn: check both user_id (direct) and author.id (from AuthorResource)
+  const isOwn = post.user_id === user?.id || post.author?.id === user?.id;
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content ?? "");
   const [editVisibility, setEditVisibility] = useState<"public" | "connections" | "private">(
@@ -204,6 +205,49 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
         </p>
       ) : null}
 
+      {/* Quoted / shared original post — shown when type is repost/share */}
+      {post.shared_post && (
+        <div className="mt-3 rounded-xl border border-line bg-elevated p-3">
+          {/* Original author */}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-[0.6rem] font-bold text-brand">
+              {post.shared_post.author?.display_image || post.shared_post.author?.candidate_profile?.profile_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imgUrl(post.shared_post.author.display_image ?? post.shared_post.author.candidate_profile?.profile_image_url) ?? ""}
+                  alt="" className="h-full w-full object-cover"
+                />
+              ) : (
+                authorName(post.shared_post.author).charAt(0)
+              )}
+            </span>
+            <span className="text-xs font-semibold">{authorName(post.shared_post.author)}</span>
+            {post.shared_post.created_at && (
+              <span className="text-xs text-faint ml-auto">
+                {new Date(post.shared_post.created_at).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          {/* Original content */}
+          {post.shared_post.content && (
+            <p className="text-sm text-muted leading-relaxed line-clamp-4">
+              {post.shared_post.content}
+            </p>
+          )}
+          {/* Original media (first image/video only) */}
+          {post.shared_post.media_urls?.[0] && (() => {
+            const url = post.shared_post.media_urls![0];
+            const isVideo = /\.(mp4|webm)(\?|$)/i.test(url);
+            return isVideo ? (
+              <video src={imgUrl(url) ?? ""} controls className="mt-2 w-full rounded-lg max-h-48 bg-black" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imgUrl(url) ?? ""} alt="" className="mt-2 w-full rounded-lg object-cover max-h-48" />
+            );
+          })()}
+        </div>
+      )}
+
       {/* Media */}
       {post.media_urls?.length ? (
         <div className={`mt-3 grid gap-2 ${post.media_urls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
@@ -232,6 +276,7 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
           myReaction={post.my_reaction}
           reactionCount={post.reactions_count}
           commentCount={post.comments_count}
+          shareCount={post.shares_count}
           saved={post.is_saved}
           onComment={() => setShowComments((v) => !v)}
         />

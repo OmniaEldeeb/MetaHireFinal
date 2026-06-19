@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { cn, imgUrl } from "@/lib/utils";
 import { socialApi } from "@/lib/api/endpoints/social";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const REACTION_ICONS: Record<string, typeof ThumbsUp> = {
   like: ThumbsUp, love: Heart, celebrate: Star, support: HandHeart, funny: Laugh,
@@ -210,6 +210,7 @@ function ShareModal({
 }) {
   const router = useRouter();
   const toast = useToastStore((s) => s.push);
+  const qc = useQueryClient();
   const [mode, setMode] = useState<ShareMode>("menu");
   const [busy, setBusy] = useState(false);
 
@@ -245,6 +246,7 @@ function ShareModal({
       const res = await socialApi.shareLink(postId);
       const url = res.url ?? window.location.href;
       await navigator.clipboard.writeText(url);
+      qc.invalidateQueries({ queryKey: ["feed"] }); // refresh shares_count
       toast({ kind: "success", title: "Link copied!" });
       onClose();
     } catch {
@@ -256,6 +258,7 @@ function ShareModal({
     setBusy(true);
     try {
       await socialApi.shareRepost(postId, visibility, repostCaption);
+      qc.invalidateQueries({ queryKey: ["feed"] }); // new repost appears + original shares_count updates
       toast({ kind: "success", title: "Reposted to your feed" });
       onClose();
     } catch {

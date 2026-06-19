@@ -17,22 +17,26 @@ export interface PostAuthor {
 
 export interface Post {
   id: number;
+  user_id?: number;
   content?: string;
   content_format?: string;
   type?: string;
   visibility?: PostVisibility;
-  media_urls?: string[];    // PostResource field name (not media)
+  media_urls?: string[];
   author?: PostAuthor;
   reactions_count?: number;
   comments_count?: number;
   shares_count?: number;
   views_count?: number;
   my_reaction?: ReactionType | null;
-  is_saved?: boolean;       // PostResource field name (not saved)
+  is_saved?: boolean;
   is_edited?: boolean;
   created_at?: string;
   updated_at?: string;
   shared_job_id?: number | null;
+  shared_post_id?: number | null;
+  // Confirmed from actual API response: shared_post included when type='share'
+  shared_post?: Post | null;
 }
 
 export interface Comment {
