@@ -86,6 +86,21 @@ export const socialApi = {
   unreact: (postId: number) =>
     api.delete<unknown>(`/posts/${postId}/react`),
 
+  // GET /posts/{post}/reactions/users
+  // Returns { total, counts: {like,love,...}, by_type: { like: [{user, reacted_at}] } }
+  reactionUsers: (postId: number) =>
+    api.get<{
+      total: number;
+      counts: Record<string, number>;
+      by_type: Record<string, Array<{
+        user: {
+          id: number; role: string; display_name: string;
+          display_image?: string | null; headline?: string | null; slug?: string | null;
+        };
+        reacted_at: string;
+      }>>;
+    }>(`/posts/${postId}/reactions/users`),
+
   // POST /api/posts/{post}/share — three types confirmed from SocialController:
   // repost: creates a new quoting post — requires visibility, optional content
   // direct: sends as DM — requires target_users[], optional content/caption

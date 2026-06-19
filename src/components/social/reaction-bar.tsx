@@ -10,6 +10,107 @@ import {
 } from "lucide-react";
 import { cn, imgUrl } from "@/lib/utils";
 import { socialApi } from "@/lib/api/endpoints/social";
+import { useQuery } from "@tanstack/react-query";
+
+const REACTION_ICONS: Record<string, typeof ThumbsUp> = {
+  like: ThumbsUp, love: Heart, celebrate: Star, support: HandHeart, funny: Laugh,
+};
+const REACTION_COLORS: Record<string, string> = {
+  like: "text-brand", love: "text-coral", celebrate: "text-amber",
+  support: "text-green", funny: "text-amber",
+};
+
+// ── Who reacted popup ─────────────────────────────────────────────────────────
+function ReactionsModal({ postId, onClose }: { postId: number; onClose: () => void }) {
+  const [tab, setTab] = useState("all");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["reaction-users", postId],
+    queryFn: () => socialApi.reactionUsers(postId),
+    staleTime: 30_000,
+  });
+
+  const allUsers = Object.values(data?.by_type ?? {}).flat();
+  const tabs = [
+    { key: "all", label: `All ${data?.total ?? ""}`, users: allUsers },
+    ...Object.entries(data?.by_type ?? {})
+      .filter(([, users]) => users.length > 0)
+      .map(([type, users]) => ({ key: type, label: type, users })),
+  ];
+
+  const current = tabs.find((t) => t.key === tab) ?? tabs[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-[400] flex items-end justify-center sm:items-center bg-black/50 backdrop-blur-sm px-4"
+      onClick={onClose}
+    >
+      <div
+        className="modal-in w-full max-w-sm overflow-hidden rounded-3xl border border-line2 bg-surface shadow-lift mb-4 sm:mb-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h3 className="font-display text-sm font-bold tracking-tight">Reactions</h3>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:text-ink">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Reaction type tabs */}
+        <div className="flex gap-1 overflow-x-auto border-b border-line px-3 py-2">
+          {tabs.map((t) => {
+            const Icon = REACTION_ICONS[t.key];
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors",
+                  tab === t.key ? "bg-elevated text-ink" : "text-muted hover:text-ink"
+                )}
+              >
+                {Icon && <Icon className={cn("h-3.5 w-3.5", REACTION_COLORS[t.key])} />}
+                {t.key === "all" ? t.label : `${t.label} ${data?.counts?.[t.key] ?? ""}`}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Users list */}
+        <div className="max-h-72 overflow-y-auto">
+          {isLoading ? (
+            <div className="grid place-items-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-brand" />
+            </div>
+          ) : (current?.users ?? []).length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted">No reactions yet</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {(current?.users ?? []).map(({ user, reacted_at }, i) => {
+                const Icon = REACTION_ICONS[tab !== "all" ? tab : "like"];
+                const href = user.role === "company" ? `/companies/${user.id}` : `/users/${user.id}`;
+                return (
+                  <li key={`${user.id}-${i}`} className="flex items-center gap-3 px-4 py-3">
+                    <a href={href} className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-elevated">
+                      {user.display_image
+                        ? <img src={imgUrl(user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                        : <span className="text-sm font-bold text-brand">{user.display_name?.charAt(0)}</span>}
+                    </a>
+                    <div className="min-w-0 flex-1">
+                      <a href={href} className="truncate text-sm font-medium hover:underline block">{user.display_name}</a>
+                      {user.headline && <p className="truncate text-xs text-muted">{user.headline}</p>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 import { messagesApi } from "@/lib/api/endpoints/messages";
 import { useToastStore } from "@/stores/toast.store";
 import { useDebounced } from "@/lib/hooks/use-debounce";
@@ -353,6 +454,7 @@ export function ReactionBar({
   const [showPicker, setShowPicker] = useState(false);
   const [bookmarked, setBookmarked] = useState(saved ?? false);
   const [showShare, setShowShare]  = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const [reacting, setReacting]   = useState(false);
   const [saving, setSaving]       = useState(false);
 
@@ -411,8 +513,18 @@ export function ReactionBar({
             {reacting ? <Loader2 className="h-4 w-4 animate-spin" />
               : active ? <active.icon className="h-4 w-4" />
               : <ThumbsUp className="h-4 w-4" />}
-            <span>{count > 0 ? count : active ? active.label : "React"}</span>
+            <span>{active ? active.label : "React"}</span>
           </button>
+
+          {/* Clickable reaction count — opens who reacted modal */}
+          {count > 0 && (
+            <button
+              onClick={() => setShowReactions(true)}
+              className="flex h-9 items-center px-1.5 text-sm text-muted hover:text-ink hover:underline"
+            >
+              {count}
+            </button>
+          )}
 
           {showPicker && !reacting && (
             <div
@@ -461,6 +573,10 @@ export function ReactionBar({
 
       {showShare && (
         <ShareModal postId={postId} onClose={() => setShowShare(false)} />
+      )}
+
+      {showReactions && (
+        <ReactionsModal postId={postId} onClose={() => setShowReactions(false)} />
       )}
     </>
   );
