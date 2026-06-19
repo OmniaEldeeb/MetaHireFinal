@@ -20,7 +20,8 @@ export function StartupPrefetch() {
       staleTime: 1000 * 60 * 30,
     });
 
-    // Notification types — used by the notification type registry
+    // Notification type metadata — labels, categories, channels per type
+    // Route: GET /meta/notification-types (public, no auth required)
     qc.prefetchQuery({
       queryKey: ["meta-notification-types"],
       queryFn: () => api.get("/meta/notification-types"),
