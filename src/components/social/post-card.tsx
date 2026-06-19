@@ -6,7 +6,7 @@ import { useState, useRef } from "react";
 import { useIntersectionObserver } from "@/lib/hooks/use-intersection";
 import {
   Image as ImageIcon, X, Globe, Users, Lock,
-  MoreVertical, Trash2, Loader2,
+  MoreVertical, Trash2, Loader2, Pencil, Check,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socialApi, type Post } from "@/lib/api/endpoints/social";
@@ -72,6 +72,28 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
   };
 
   const isOwn = post.author?.id === user?.id;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content ?? "");
+  const [editVisibility, setEditVisibility] = useState<"public" | "connections" | "private">(
+    (post.visibility as "public" | "connections" | "private") ?? "public"
+  );
+  const [saving, setSaving] = useState(false);
+
+  const saveEdit = async () => {
+    if (!editContent.trim()) return;
+    setSaving(true);
+    try {
+      await socialApi.updatePost(post.id, { content: editContent.trim(), visibility: editVisibility });
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["saved-posts"] });
+      setIsEditing(false);
+      toast({ kind: "success", title: "Post updated" });
+    } catch {
+      toast({ kind: "error", title: "Update failed" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <article
@@ -129,6 +151,10 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-xl border border-line2 bg-surface shadow-lift">
+                  <button onClick={() => { setMenuOpen(false); setIsEditing(true); }}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-elevated">
+                    <Pencil className="h-4 w-4" /> Edit
+                  </button>
                   <button onClick={del} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-coral hover:bg-elevated">
                     <Trash2 className="h-4 w-4" /> Delete
                   </button>
@@ -139,12 +165,44 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
         )}
       </div>
 
-      {/* Content */}
-      {post.content && (
+      {/* Content — edit mode or display mode */}
+      {isEditing ? (
+        <div className="mt-4 space-y-2">
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={4}
+            autoFocus
+            className="w-full resize-none rounded-xl border border-brand bg-elevated px-3 py-2.5 text-sm outline-none"
+          />
+          <div className="flex items-center gap-2">
+            <select
+              value={editVisibility}
+              onChange={(e) => setEditVisibility(e.target.value as "public" | "connections" | "private")}
+              className="rounded-lg border border-line bg-elevated px-2 py-1.5 text-xs outline-none"
+            >
+              <option value="public">Public</option>
+              <option value="connections">Connections</option>
+              <option value="private">Private</option>
+            </select>
+            <div className="ml-auto flex gap-2">
+              <button onClick={() => setIsEditing(false)}
+                className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium hover:bg-elevated">
+                Cancel
+              </button>
+              <button onClick={saveEdit} disabled={saving || !editContent.trim()}
+                className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : post.content ? (
         <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-relaxed">
           {post.content}
         </p>
-      )}
+      ) : null}
 
       {/* Media */}
       {post.media_urls?.length ? (

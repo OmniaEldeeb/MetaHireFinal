@@ -108,6 +108,14 @@ export const socialApi = {
   shareLink: (postId: number) =>
     api.post<{ url?: string }>(`/posts/${postId}/share`, { type: "link" }),
 
+  // GET /posts/{post}/shares — { total, reposts }
+  shareCounts: (postId: number) =>
+    api.get<{ total: number; reposts: number }>(`/posts/${postId}/shares`),
+
+  // GET /posts/{post}/shares/users — paginated list of users who reposted
+  shareUsers: (postId: number, perPage = 20) =>
+    api.get<{ total: number; reposts: unknown[] }>(`/posts/${postId}/shares/users?per_page=${perPage}`),
+
   shareRepost: (postId: number, visibility: "public" | "connections" | "private", content?: string) =>
     api.post<{ post?: unknown }>(`/posts/${postId}/share`, {
       type: "repost",
