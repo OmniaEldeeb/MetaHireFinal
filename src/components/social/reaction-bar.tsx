@@ -28,12 +28,21 @@ function ShareUsersModal({ postId, total, onClose }: { postId: number; total: nu
     staleTime: 30_000,
   });
 
-  const reposts = (data?.reposts as Array<{
+  type RepostItem = {
     user: { id: number; role: string; display_name: string; display_image?: string | null; headline?: string | null };
     comment?: string | null;
     reposted_at: string;
     post_id: number;
-  }>) ?? [];
+  };
+
+  // shareUsers returns { total, reposts: Paginator{data:[...]} }
+  // After API client unwraps: data.reposts is the paginator object, extract .data array
+  const repostsRaw = data?.reposts as unknown;
+  const reposts: RepostItem[] = Array.isArray(repostsRaw)
+    ? (repostsRaw as RepostItem[])
+    : Array.isArray((repostsRaw as { data?: unknown })?.data)
+      ? ((repostsRaw as { data: RepostItem[] }).data)
+      : [];
 
   return (
     <div

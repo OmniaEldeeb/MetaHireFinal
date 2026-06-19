@@ -205,9 +205,16 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
         </p>
       ) : null}
 
-      {/* Quoted / shared original post — shown when type is repost/share */}
+      {/* Quoted / shared original post — clicking navigates to the original post */}
       {post.shared_post && (
-        <div className="mt-3 rounded-xl border border-line bg-elevated p-3">
+        <a
+          href={`/posts/${post.shared_post.id}`}
+          className="mt-3 block rounded-xl border border-line bg-elevated p-3 hover:border-brand transition-colors cursor-pointer"
+          onClick={(e) => {
+            // Don't navigate if user clicked a video control
+            if ((e.target as HTMLElement).closest("video")) e.preventDefault();
+          }}
+        >
           {/* Original author */}
           <div className="flex items-center gap-2 mb-2">
             <span className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-[0.6rem] font-bold text-brand">
@@ -245,7 +252,8 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
               <img src={imgUrl(url) ?? ""} alt="" className="mt-2 w-full rounded-lg object-cover max-h-48" />
             );
           })()}
-        </div>
+          <p className="mt-2 text-[0.65rem] text-brand">View original post →</p>
+        </a>
       )}
 
       {/* Media */}
