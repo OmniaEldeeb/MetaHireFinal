@@ -24,9 +24,6 @@ export function cn(...inputs: ClassValue[]) {
 export function imgUrl(url: string | null | undefined): string | null {
   if (!url) return null;
 
-  // Already a full external URL that's NOT localhost → pass through
-  if (url.startsWith("https://") && !url.includes("localhost")) return url;
-
   // Get the ngrok/production base (strip trailing /api)
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
   const assetBase = apiBase.replace(/\/api\/?$/, "");
@@ -35,15 +32,22 @@ export function imgUrl(url: string | null | undefined): string | null {
   if (url.startsWith("http://localhost") || url.startsWith("http://127.0.0.1")) {
     try {
       const u = new URL(url);
-      return assetBase + u.pathname;
+      url = assetBase + u.pathname;
     } catch {
       return null;
     }
   }
 
-  // Relative path (e.g. "storage/logos/abc.jpg")
+  // Relative path (e.g. "storage/logos/abc.jpg") → prepend asset base
   if (!url.startsWith("http")) {
-    return `${assetBase}/${url.replace(/^\//, "")}`;
+    url = `${assetBase}/${url.replace(/^\//, "")}`;
+  }
+
+  // Route storage URLs through our proxy to bypass ngrok browser warning.
+  // ngrok returns an HTML warning page for browser <img> requests without
+  // the ngrok-skip-browser-warning header. The proxy adds it server-side.
+  if (assetBase && url.startsWith(assetBase) && url.includes("/storage/")) {
+    return `/api/storage?url=${encodeURIComponent(url)}`;
   }
 
   return url;
