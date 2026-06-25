@@ -154,11 +154,12 @@ export const cvApi = {
     if (useAi) fd.append("use_ai", "true");
     return api.post<Cv>("/cv/upload", fd);
   },
-  uploadPhoto: (file: File) => {
-    const fd = new FormData();
-    fd.append("photo", file);
-    return api.post<unknown>("/cv/photo", fd);
-  },
+  uploadPhoto: (file: File) =>
+    api.post<{ photo_base64: string }>("/cv/photo", (() => {
+      const fd = new FormData();
+      fd.append("photo", file);
+      return fd;
+    })()),
   buildFromProfile: (body: {
     format: "pdf" | "docx";
     template: string;
@@ -166,7 +167,15 @@ export const cvApi = {
     photo_base64?: string;
   }) =>
     api.post<Blob>("/cv/build-from-profile", body, { responseType: "blob" }),
-  build: (id: number, body: { format: "pdf" | "docx"; template: string }) =>
+  // POST /cv/{id}/build
+  // format=html  → JSON { type:"html", template, html:"<!DOCTYPE..." }
+  // format=pdf|docx → binary blob
+  buildHtml: (id: number, body: { template: string; photo_base64?: string }) =>
+    api.post<{ type: string; template: string; html: string }>(
+      `/cv/${id}/build`,
+      { format: "html", ...body }
+    ),
+  build: (id: number, body: { format: "pdf" | "docx"; template: string; photo_base64?: string }) =>
     api.post<Blob>(`/cv/${id}/build`, body, { responseType: "blob" }),
   rename: (id: number, name: string) =>
     api.patch<Cv>(`/cv/${id}/rename`, { name }),

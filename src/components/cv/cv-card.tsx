@@ -14,7 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { cvApi, blobDownload, type Cv } from "@/lib/api/endpoints/cv";
+import { cvApi, type Cv } from "@/lib/api/endpoints/cv";
+import { CvBuildModal } from "@/components/cv/cv-build-modal";
 import { useToastStore } from "@/stores/toast.store";
 
 function formatDate(iso?: string) {
@@ -47,6 +48,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
   const [renaming, setRenaming] = useState(false);
   const [nameInput, setNameInput] = useState(cv.name ?? cv.original_filename ?? "");
   const [busy, setBusy] = useState<string | null>(null);
+  const [showBuild, setShowBuild] = useState(false);
   // Optimistic local favorite state so star toggles instantly
   const [localFav, setLocalFav] = useState<boolean | null>(null);
   const starred = localFav !== null ? localFav : isFavorite;
@@ -70,16 +72,9 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
     }
   };
 
-  const download = async (format: "pdf" | "docx") => {
-    setBusy("download");
-    try {
-      const blob = await cvApi.build(cv.id, { format, template: "nova" });
-      blobDownload(blob, `cv-${cv.id}.${format}`);
-    } catch {
-      toast({ kind: "error", title: "Download failed" });
-    } finally {
-      setBusy(null);
-    }
+  const download = () => {
+    setMenuOpen(false);
+    setShowBuild(true);
   };
 
   const doRename = async () => {
@@ -132,6 +127,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
   };
 
   return (
+    <>
     <div
       className={cn(
         "group relative flex flex-col gap-3 rounded-2xl border bg-surface p-5 transition-all",
@@ -203,8 +199,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                   <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-2xl border border-line2 bg-surface shadow-lift">
                     {[
-                      { icon: Download, label: "Download PDF", action: () => { setMenuOpen(false); download("pdf"); } },
-                      { icon: Download, label: "Download DOCX", action: () => { setMenuOpen(false); download("docx"); } },
+                      { icon: Download, label: "Export CV", action: () => download() },
                       { icon: BarChart2, label: "View report", action: () => { setMenuOpen(false); onViewReport(cv.id); } },
                       { icon: Pencil, label: "Rename", action: () => { setMenuOpen(false); setRenaming(true); } },
                       { icon: RefreshCw, label: "Rebuild AI", action: doRebuild },
@@ -246,5 +241,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
         ) : null}
       </div>
     </div>
+    {showBuild && <CvBuildModal cvId={cv.id} onClose={() => setShowBuild(false)} />}
+  </>
   );
 }
