@@ -108,7 +108,7 @@ function ApplicantDrawer({
             <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated">
               {p?.profile_image_url
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img loading="lazy" src={imgUrl(p.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover" />
+                ? <img src={imgUrl(p.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover" />
                 : <span className="font-display text-lg font-bold text-brand">{c?.name?.charAt(0) ?? "?"}</span>}
             </div>
             <div>
@@ -368,7 +368,7 @@ export default function AllApplicantsPage() {
                     <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated">
                       {p?.profile_image_url
                         // eslint-disable-next-line @next/next/no-img-element
-                        ? <img loading="lazy" src={imgUrl(p.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover rounded-full" />
+                        ? <img src={imgUrl(p.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover rounded-full" />
                         : <Building2 className="h-5 w-5 text-faint" />}
                     </div>
                     <div className="min-w-0 flex-1">

@@ -103,7 +103,7 @@ export function JobDetail({ id }: { id: number }) {
           <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-line bg-elevated">
             {job.company?.logo_url
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img loading="lazy" src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
+              ? <img src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
               : <Building2 className="h-6 w-6 text-faint" />}
           </div>
           <div className="min-w-0 flex-1">

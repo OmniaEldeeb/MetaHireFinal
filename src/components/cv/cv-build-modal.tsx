@@ -188,7 +188,7 @@ export function CvBuildModal({ cvId, onClose }: { cvId: number; onClose: () => v
                   <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-line bg-elevated">
                     {photoPreview
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img loading="lazy" src={photoPreview} alt="" className="h-full w-full object-cover" />
+                      ? <img src={photoPreview} alt="" className="h-full w-full object-cover" />
                       : <Camera className="h-6 w-6 text-faint" />}
                   </div>
                   <div>

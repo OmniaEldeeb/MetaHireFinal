@@ -60,7 +60,7 @@ export function UserMenu() {
         <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-lg bg-brand-soft font-display text-sm font-bold text-brand">
           {resolvedAvatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img loading="lazy" src={resolvedAvatarUrl} alt="" className="h-full w-full object-cover" />
+            <img src={resolvedAvatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             initial
           )}
@@ -78,7 +78,7 @@ export function UserMenu() {
               <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-brand-soft font-display text-sm font-bold text-brand">
                 {resolvedAvatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img loading="lazy" src={resolvedAvatarUrl} alt="" className="h-full w-full object-cover" />
+                  <img src={resolvedAvatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
                   initial
                 )}

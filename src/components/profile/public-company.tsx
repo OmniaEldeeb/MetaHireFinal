@@ -50,14 +50,14 @@ export function PublicCompany({ id }: { id: number }) {
         <div className="h-36 bg-elevated">
           {c.cover_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img loading="lazy" src={imgUrl(c.cover_image_url) ?? ""} alt="" className="h-full w-full object-cover" />
+            <img src={imgUrl(c.cover_image_url) ?? ""} alt="" className="h-full w-full object-cover" />
           ) : null}
         </div>
         <div className="px-6 pb-6">
           <div className="-mt-10 grid h-20 w-20 place-items-center overflow-hidden rounded-2xl border border-line bg-surface">
             {c.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img loading="lazy" src={imgUrl(c.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
+              <img src={imgUrl(c.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
             ) : (
               <Building2 className="h-8 w-8 text-faint" />
             )}

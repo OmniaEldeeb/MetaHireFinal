@@ -41,7 +41,7 @@ export function JobCard({ job }: { job: Job }) {
         <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-elevated">
           {job.company?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img loading="lazy" src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
+            <img src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
           ) : (
             <Building2 className="h-5 w-5 text-faint" />
           )}
