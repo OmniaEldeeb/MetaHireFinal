@@ -75,7 +75,7 @@ function ShareUsersModal({ postId, total, onClose }: { postId: number; total: nu
                     <div className="flex items-center gap-3">
                       <a href={href} className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-elevated">
                         {r.user.display_image
-                          ? <img src={imgUrl(r.user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                          ? <img loading="lazy" src={imgUrl(r.user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
                           : <span className="text-sm font-bold text-brand">{r.user.display_name?.charAt(0)}</span>}
                       </a>
                       <div className="min-w-0 flex-1">
@@ -169,7 +169,7 @@ function ReactionsModal({ postId, onClose }: { postId: number; onClose: () => vo
                   <li key={`${user.id}-${i}`} className="flex items-center gap-3 px-4 py-3">
                     <a href={href} className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-elevated">
                       {user.display_image
-                        ? <img src={imgUrl(user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                        ? <img loading="lazy" src={imgUrl(user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
                         : <span className="text-sm font-bold text-brand">{user.display_name?.charAt(0)}</span>}
                     </a>
                     <div className="min-w-0 flex-1">
@@ -424,7 +424,7 @@ function ShareModal({
                 <div className="flex items-center gap-3 rounded-xl border border-brand/20 bg-brand-soft/20 px-3 py-2.5">
                   <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-xs font-bold text-brand">
                     {selected.display_image
-                      ? <img src={imgUrl(selected.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                      ? <img loading="lazy" src={imgUrl(selected.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
                       : (selected.display_name ?? "?").charAt(0)}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -485,7 +485,7 @@ function ShareModal({
                           >
                             <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-sm font-bold text-brand">
                               {u.display_image
-                                ? <img src={imgUrl(u.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                                ? <img loading="lazy" src={imgUrl(u.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
                                 : (u.display_name ?? "?").charAt(0)}
                             </span>
                             <span className="min-w-0 flex-1">

@@ -138,7 +138,7 @@ function MessageThread({
                 {m.body && <p className="leading-relaxed">{m.body}</p>}
                 {m.media_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imgUrl(m.media_url) ?? ""} alt="" className="mt-2 rounded-xl max-w-xs" />
+                  <img loading="lazy" src={imgUrl(m.media_url) ?? ""} alt="" className="mt-2 rounded-xl max-w-xs" />
                 )}
                 <p className={cn("mt-1 text-[0.65rem]", isMine(m) ? "text-white/60" : "text-faint")}>
                   {timeAgo(m.created_at)}
@@ -322,7 +322,7 @@ function ConversationList({
                   >
                     <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-sm font-bold text-brand">
                       {u.display_image
-                        ? <img src={imgUrl(u.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                        ? <img loading="lazy" src={imgUrl(u.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
                         : (u.display_name ?? "?").charAt(0)}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -368,7 +368,7 @@ function ConversationList({
               >
                 <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated text-sm font-bold text-brand">
                   {conv.other_user?.display_image
-                    ? <img src={imgUrl(conv.other_user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
+                    ? <img loading="lazy" src={imgUrl(conv.other_user.display_image) ?? ""} alt="" className="h-full w-full object-cover" />
                     : conv.other_user?.display_name?.charAt(0) ?? "?"}
                 </div>
                 <div className="min-w-0 flex-1">

@@ -36,7 +36,7 @@ export function ProfilePostCard({ post }: { post: Post }) {
       <div className="flex items-center gap-2.5 mb-3">
         <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-xs font-bold text-brand">
           {authorImg
-            ? <img src={imgUrl(authorImg) ?? ""} alt="" className="h-full w-full object-cover" />
+            ? <img loading="lazy" src={imgUrl(authorImg) ?? ""} alt="" className="h-full w-full object-cover" />
             : authorName.charAt(0)}
         </span>
         <div className="min-w-0 flex-1">
@@ -70,7 +70,7 @@ export function ProfilePostCard({ post }: { post: Post }) {
               <video key={i} src={resolved} className="rounded-xl w-full max-h-40 object-cover bg-black" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={resolved} alt="" className="rounded-xl w-full max-h-40 object-cover" />
+              <img loading="lazy" key={i} src={resolved} alt="" className="rounded-xl w-full max-h-40 object-cover" />
             );
           })}
         </div>

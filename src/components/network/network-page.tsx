@@ -81,13 +81,13 @@ function UserCard({
       {profileHref ? (
         <a href={profileHref} className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated text-sm font-bold text-brand">
           {img
-            ? <img src={imgUrl(img) ?? ""} alt="" className="h-full w-full object-cover" />
+            ? <img loading="lazy" src={imgUrl(img) ?? ""} alt="" className="h-full w-full object-cover" />
             : initial}
         </a>
       ) : (
         <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated text-sm font-bold text-brand">
           {img
-            ? <img src={imgUrl(img) ?? ""} alt="" className="h-full w-full object-cover" />
+            ? <img loading="lazy" src={imgUrl(img) ?? ""} alt="" className="h-full w-full object-cover" />
             : initial}
         </div>
       )}

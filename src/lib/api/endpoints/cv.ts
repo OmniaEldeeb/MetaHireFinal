@@ -145,9 +145,24 @@ export const cvApi = {
     latest_score?: Record<string, unknown> | null;
   }>(`/cv/${id}`),
 
-  // PATCH /cv/{id} — update CV parsed_data (edit CV content)
-  update: (id: number, body: { parsed_data?: Record<string, unknown>; name?: string }) =>
-    api.patch<Cv>(`/cv/${id}`, body),
+  // PATCH /cv/{id} — creates a new user_edited version from source CV
+  // Confirmed from CvController: partial edits supported, source CV never mutated
+  // Returns 201 with new Cv record (type=user_edited)
+  update: (id: number, body: {
+    parsed_data?: {
+      name?: string;
+      title?: string;
+      summary?: string;
+      skills?: string[];
+      experience?: Record<string, unknown>[];
+      education?: Record<string, unknown>[];
+      contact?: Record<string, unknown>;
+      projects?: Record<string, unknown>[];
+      certifications?: Record<string, unknown>[];
+      languages?: Record<string, unknown>[];
+    };
+    name?: string;
+  }) => api.patch<Cv>(`/cv/${id}`, body),
   upload: (file: File, useAi = false) => {
     const fd = new FormData();
     fd.append("file", file);

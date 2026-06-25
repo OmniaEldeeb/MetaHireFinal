@@ -57,7 +57,7 @@ export function ImageUpload({
       >
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imgUrl(url) ?? ""} alt="" className="h-full w-full object-cover" />
+          <img loading="lazy" src={imgUrl(url) ?? ""} alt="" className="h-full w-full object-cover" />
         ) : (
           fallback
         )}

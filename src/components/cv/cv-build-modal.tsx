@@ -81,6 +81,12 @@ export function CvBuildModal({ cvId, onClose }: { cvId: number; onClose: () => v
           template,
           photo_base64: photoBase64 ?? undefined,
         });
+        // Open full page in new tab — looks much better than a small iframe
+        const blob = new Blob([res.html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank", "noopener");
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        // Also store for "Preview in modal" fallback
         setHtmlPreview(res.html);
       } else {
         const blob = await cvApi.build(cvId, {
@@ -182,7 +188,7 @@ export function CvBuildModal({ cvId, onClose }: { cvId: number; onClose: () => v
                   <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-line bg-elevated">
                     {photoPreview
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={photoPreview} alt="" className="h-full w-full object-cover" />
+                      ? <img loading="lazy" src={photoPreview} alt="" className="h-full w-full object-cover" />
                       : <Camera className="h-6 w-6 text-faint" />}
                   </div>
                   <div>
@@ -228,15 +234,27 @@ export function CvBuildModal({ cvId, onClose }: { cvId: number; onClose: () => v
                   onClick={() => {
                     const blob = new Blob([htmlPreview], { type: "text/html" });
                     const url = URL.createObjectURL(blob);
+                    window.open(url, "_blank", "noopener");
+                    // revoke after a delay so the new tab can load it
+                    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-strong"
+                >
+                  <Eye className="h-3.5 w-3.5" /> Open full page
+                </button>
+                <button
+                  onClick={() => {
+                    const blob = new Blob([htmlPreview], { type: "text/html" });
+                    const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
                     a.download = `cv-${cvId}-${template}.html`;
                     a.click();
                     URL.revokeObjectURL(url);
                   }}
-                  className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-strong"
+                  className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium hover:bg-surface"
                 >
-                  <Download className="h-3.5 w-3.5" /> Download HTML
+                  <Download className="h-3.5 w-3.5" /> Download
                 </button>
               </div>
             </div>

@@ -237,7 +237,7 @@ function SearchInner() {
                   <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-elevated">
                     {job.company?.logo_url
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
+                      ? <img loading="lazy" src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
                       : <Briefcase className="h-4 w-4 text-faint" />}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -255,7 +255,7 @@ function SearchInner() {
                   <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated text-sm font-bold text-brand">
                     {u.candidate_profile?.profile_image_url
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={imgUrl(u.candidate_profile.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover rounded-full" />
+                      ? <img loading="lazy" src={imgUrl(u.candidate_profile.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover rounded-full" />
                       : u.name.charAt(0)}
                   </div>
                   <div>
@@ -275,7 +275,7 @@ function SearchInner() {
                   <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-elevated">
                     {c.logo_url
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={imgUrl(c.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
+                      ? <img loading="lazy" src={imgUrl(c.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
                       : <Building2 className="h-4 w-4 text-faint" />}
                   </div>
                   <div>

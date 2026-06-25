@@ -121,7 +121,7 @@ export function BuildCvModal({ onClose }: { onClose: () => void }) {
                       >
                         {t.preview_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <img loading="lazy"
                             src={imgUrl(t.preview_url) ?? ""}
                             alt={t.name}
                             className="h-28 w-full object-cover"

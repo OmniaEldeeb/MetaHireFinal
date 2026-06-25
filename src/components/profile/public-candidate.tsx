@@ -64,7 +64,7 @@ export function PublicCandidate({ id }: { id: number }) {
           <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated">
             {p.profile_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imgUrl(p.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover" />
+              <img loading="lazy" src={imgUrl(p.profile_image_url) ?? ""} alt="" className="h-full w-full object-cover" />
             ) : (
               <span className="font-display text-2xl font-bold text-brand">{u.name?.charAt(0)}</span>
             )}

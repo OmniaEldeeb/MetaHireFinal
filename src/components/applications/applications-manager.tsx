@@ -96,7 +96,7 @@ function ApplicationDrawer({
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-elevated">
                   {job.company?.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover rounded-xl" />
+                    <img loading="lazy" src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover rounded-xl" />
                   ) : (
                     <Building2 className="h-5 w-5 text-faint" />
                   )}
@@ -267,7 +267,7 @@ export function ApplicationsManager() {
                     <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-elevated">
                       {job?.company?.logo_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
+                        <img loading="lazy" src={imgUrl(job.company.logo_url) ?? ""} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <Briefcase className="h-5 w-5 text-faint" />
                       )}
@@ -368,7 +368,7 @@ export function SavedJobsManager() {
                 <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-elevated">
                   {(job.company?.logo_url || (job.company as { logo?: string } | undefined)?.logo) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(job.company?.logo_url ?? (job.company as { logo?: string } | undefined)?.logo) ?? ""} alt="" className="h-full w-full object-cover" />
+                    <img loading="lazy" src={imgUrl(job.company?.logo_url ?? (job.company as { logo?: string } | undefined)?.logo) ?? ""} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <Briefcase className="h-5 w-5 text-faint" />
                   )}

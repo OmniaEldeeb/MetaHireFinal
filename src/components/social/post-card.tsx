@@ -130,7 +130,7 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
           const avatar = (
             <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-elevated text-sm font-bold text-brand">
               {authorImage(post.author)
-                ? <img src={imgUrl(authorImage(post.author)) ?? ""} alt="" className="h-full w-full object-cover" />
+                ? <img loading="lazy" src={imgUrl(authorImage(post.author)) ?? ""} alt="" className="h-full w-full object-cover" />
                 : authorName(post.author).charAt(0)}
             </span>
           );
@@ -250,7 +250,7 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
             <span className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-[0.6rem] font-bold text-brand">
               {post.shared_post.author?.display_image || post.shared_post.author?.candidate_profile?.profile_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <img loading="lazy"
                   src={imgUrl(post.shared_post.author.display_image ?? post.shared_post.author.candidate_profile?.profile_image_url) ?? ""}
                   alt="" className="h-full w-full object-cover"
                 />
@@ -279,7 +279,7 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
               <video src={imgUrl(url) ?? ""} controls className="mt-2 w-full rounded-lg max-h-48 bg-black" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imgUrl(url) ?? ""} alt="" className="mt-2 w-full rounded-lg object-cover max-h-48" />
+              <img loading="lazy" src={imgUrl(url) ?? ""} alt="" className="mt-2 w-full rounded-lg object-cover max-h-48" />
             );
           })()}
           <p className="mt-2 text-[0.65rem] text-brand">View original post →</p>
@@ -301,7 +301,7 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={resolved} alt="" className="rounded-xl object-cover w-full max-h-80" />
+              <img loading="lazy" key={i} src={resolved} alt="" className="rounded-xl object-cover w-full max-h-80" />
             );
           })}
         </div>
@@ -394,7 +394,7 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
                   />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={objUrl} alt="" className="h-20 w-20 rounded-xl object-cover" />
+                  <img loading="lazy" src={objUrl} alt="" className="h-20 w-20 rounded-xl object-cover" />
                 )}
                 <button
                   onClick={() => setMedia((m) => m.filter((_, j) => j !== i))}
