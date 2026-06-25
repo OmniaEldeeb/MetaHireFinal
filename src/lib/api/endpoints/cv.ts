@@ -25,33 +25,72 @@ export interface CvTemplate {
 // Controller returns: { score: CvScoreData, analysis: CvAnalysisData, recommendation: CvRecommendationData }
 // We flatten into a single CvReport object for the modal
 
+// ── Confirmed from actual API response (POST /cv/{id}/report) ─────────────────
+
+export interface CvScoreBreakdown {
+  skills_match?: number;
+  experience_relevance?: number;
+  education_fit?: number;
+  projects?: number;
+  ats_readability?: number;
+  achievements?: number;
+}
+
+export interface CvExperienceAnalysis {
+  required_level?: string;
+  detected_level?: string;
+  years_required?: number;
+  years_detected?: number;
+}
+
+export interface CvEducationAnalysis {
+  required?: string;
+  detected?: string;
+  match_level?: string;
+}
+
+export interface CvProjectsAnalysis {
+  relevant_projects?: string[];
+  missing_project_types?: string[];
+}
+
 export interface CvScoreData {
-  score?: number;                    // 0-100 overall ATS score
-  score_breakdown?: Record<string, number>;
-  matched_skills?: string[];         // skills candidate has that match
-  missing_skills?: string[];         // skills candidate lacks
-  experience_analysis?: string;
-  education_analysis?: string;
-  projects_analysis?: string;
+  // Present in with_job mode, null in general mode
+  score?: number | null;
+  score_breakdown?: CvScoreBreakdown | null;
+  matched_skills?: string[];
+  missing_skills?: string[];
+  experience_analysis?: CvExperienceAnalysis | null;
+  education_analysis?: CvEducationAnalysis | null;
+  projects_analysis?: CvProjectsAnalysis | null;
   ats_keywords_missing?: string[];
-  strengths?: string[];              // general strengths
-  weaknesses?: string[];             // areas to improve
+  strengths?: string[];
+  weaknesses?: string[];
   quick_recommendations?: string[];
-  hire_decision_hint?: string;       // 'strong_yes'|'yes'|'maybe'|'no'
-  summary?: string;
+  hire_decision_hint?: string;
+  summary?: string | null;
 }
 
 export interface CvAnalysisData {
-  job_fit_level?: string;            // 'excellent'|'good'|'fair'|'poor' — only when job_description provided
+  // with_job mode fields
+  job_fit_level?: string;            // 'low'|'fair'|'good'|'excellent'
   fit_summary?: string;
-  strengths_for_this_job?: string[]; // job-specific strengths
-  critical_gaps?: string[];          // must-have skills missing
-  nice_to_have_gaps?: string[];      // optional skills missing
+  strengths_for_this_job?: string[];
+  critical_gaps?: string[];
+  nice_to_have_gaps?: string[];
   experience_match?: string;
   education_match?: string;
   interview_focus_areas?: string[];
-  hire_recommendation?: string;
+  hire_recommendation?: string;      // 'yes'|'no'|'maybe'
   summary?: string;
+
+  // general mode fields (no job description)
+  career_level?: string;             // 'junior'|'mid'|'senior'
+  strengths?: string[];
+  weaknesses?: string[];
+  key_skills_detected?: string[];
+  career_progression_analysis?: string;
+  missing_information?: string[];
 }
 
 export interface CvRecommendationData {
