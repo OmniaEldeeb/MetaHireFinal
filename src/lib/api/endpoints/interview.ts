@@ -13,6 +13,9 @@ export interface StartSessionBody {
   target_company?: string;
   job_description_text?: string;
   cv_id?: number;
+  // For job interviews: interview already created via invitation token
+  // Skip POST /interview/start and use this id directly
+  interview_id?: number;
 }
 
 export interface InterviewSession {
@@ -146,9 +149,17 @@ export interface PastInterview {
 // ── Invitation token ─────────────────────────────────────────────────────────
 
 export interface InvitationDetail {
-  interview_type?: string;
-  job?: { title?: string; company?: { name?: string } };
-  instructions?: string;
+  // Confirmed from ApplicationController::resolveInvitation() response
+  interview_id: number;
+  job_title: string;
+  company_name: string;
+  target_role: string;
+  level: string;
+  tech_stack: string[];
+  total_questions: number;
+  language: string;
+  expires_at: string;
+  started_at: string;
 }
 
 // ── API calls ────────────────────────────────────────────────────────────────

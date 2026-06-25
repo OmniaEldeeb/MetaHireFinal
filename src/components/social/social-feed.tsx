@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Newspaper } from "lucide-react";
 import { Container } from "@/components/ui/section";
@@ -20,13 +20,21 @@ export function SocialFeed() {
 
   const { items = [], lastPage = 1 } = data ?? {};
 
+  const submittedRef = useRef(new Set<number>());
+
   const handleView = useCallback(
     (id: number) => {
       setViewed((prev) => {
         if (prev.has(id)) return prev;
         const next = new Set(prev).add(id);
         if (next.size % 5 === 0) {
-          socialApi.recordViews([...next]).catch(() => {});
+          // Only send IDs not yet submitted to avoid 422 from deleted/duplicate posts
+          const newIds = [...next].filter((i) => !submittedRef.current.has(i));
+          if (newIds.length > 0) {
+            socialApi.recordViews(newIds).then(() => {
+              newIds.forEach((i) => submittedRef.current.add(i));
+            }).catch(() => {});
+          }
         }
         return next;
       });

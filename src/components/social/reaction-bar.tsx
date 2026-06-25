@@ -675,18 +675,6 @@ export function ReactionBar({
           <Share2 className="h-4 w-4" />
           <span className="hidden sm:inline">Share</span>
         </button>
-
-        {/* Save / Bookmark */}
-        <button onClick={save} disabled={saving}
-          className={cn(
-            "flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-medium transition-colors hover:bg-elevated disabled:opacity-60",
-            bookmarked ? "text-brand" : "text-muted",
-          )}>
-          {saving
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : <Bookmark className={cn("h-4 w-4", bookmarked && "fill-current")} />}
-          <span className="hidden sm:inline">Save</span>
-        </button>
       </div>
 
       {showShare && (

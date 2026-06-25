@@ -10,8 +10,15 @@ import type { StartSessionBody } from "@/lib/api/endpoints/interview";
 import { createEcho, type EchoLike } from "@/lib/realtime/echo";
 import { getToken } from "@/lib/api/session";
 
-export function InterviewController() {
+export function InterviewController({
+  preloadInterviewId,
+}: {
+  preloadInterviewId?: number;
+} = {}) {
   const router = useRouter();
+  const searchParams = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : null;
   const orchestratorRef = useRef<InterviewOrchestrator | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [orchState, setOrchState] = useState<OrchestratorState | null>(null);
@@ -119,6 +126,43 @@ export function InterviewController() {
   };
 
   const phase = orchState?.phase ?? "idle";
+
+  // For job interviews: auto-start with data from URL params (set by invitation page)
+  const jobTitle = searchParams?.get("job_title") ?? "";
+  const targetRole = searchParams?.get("target_role") ?? "";
+  const level = searchParams?.get("level") ?? "mid";
+  const language = (searchParams?.get("language") ?? "en") as "en" | "ar";
+  const totalQuestions = Number(searchParams?.get("total_questions") ?? "10") as 5 | 10 | 15;
+  const techStack = searchParams?.get("tech_stack")?.split(",").filter(Boolean) ?? [];
+
+  if (phase === "idle" && preloadInterviewId) {
+    // Job interview from invitation — skip setup, show confirm screen
+    return (
+      <div className="mx-auto max-w-lg py-16 px-5 text-center">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight mb-2">
+          {jobTitle || "AI Interview"}
+        </h1>
+        <p className="text-muted mb-8">
+          You are about to start your AI interview. Make sure you are in a quiet place
+          with your camera and microphone ready.
+        </p>
+        <button
+          onClick={() => handleStart({
+            target_role: targetRole || "Candidate",
+            level: level as "junior" | "mid" | "senior" | "lead",
+            tech_stack: techStack,
+            experience_years: 0,
+            language,
+            total_questions: totalQuestions,
+            interview_id: preloadInterviewId,
+          })}
+          className="rounded-2xl bg-brand px-8 py-3.5 text-sm font-bold text-white hover:bg-brand-strong"
+        >
+          Start Interview →
+        </button>
+      </div>
+    );
+  }
 
   if (phase === "idle") return <InterviewSetup onStart={handleStart} />;
 

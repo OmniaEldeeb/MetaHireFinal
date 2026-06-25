@@ -120,8 +120,12 @@ export class InterviewOrchestrator {
       await this.recorder.requestMic();
 
       // 2-3. Start session + tone + face in parallel
+      // For job interviews: interview_id already exists from the invitation token
+      // Skip POST /interview/start and use the existing interview_id directly
       const [session, tone, face] = await Promise.all([
-        interviewApi.start(body),
+        body.interview_id
+          ? Promise.resolve({ interview_id: body.interview_id })
+          : interviewApi.start(body),
         interviewApi.toneStart(),
         interviewApi.faceStart(),
       ]);

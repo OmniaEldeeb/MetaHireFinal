@@ -88,7 +88,7 @@ export function PublicCandidate({ id }: { id: number }) {
               <div className="mt-3 flex items-center gap-4 text-sm text-muted">
                 {stats.connections_count !== undefined && (
                   <span className="flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5" />{stats.connections_count} connections
+                    <Users className="h-3.5 w-3.5" />{stats.connections_count} connection{stats.connections_count !== 1 ? "s" : ""}
                   </span>
                 )}
                 {stats.posts_count !== undefined && (
