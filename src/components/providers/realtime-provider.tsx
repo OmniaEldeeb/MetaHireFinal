@@ -12,14 +12,13 @@ import { notificationsApi } from "@/lib/api/endpoints/notifications";
 import { conversationsApi } from "@/lib/api/endpoints/conversations";
 
 /**
- * Strategy:
- * - WebSocket connected  → zero polling, all updates come via events
- * - WebSocket down/failed → poll every 2 min as fallback only
+ * Zero polling when WebSocket is connected.
+ * One-time fallback fetch when WS is confirmed down — then nothing until reconnect.
  *
- * This means: if Reverb is running and tunnel is healthy, NO polling requests
- * at all. The interval only activates when the socket can't connect.
+ * Pusher-js retries connections automatically, so we must NOT call refreshCounts()
+ * on every state change — only once per genuine connect/disconnect transition.
  */
-const FALLBACK_POLL_MS = 2 * 60 * 1000; // 2 min, only when WS is down
+const FALLBACK_POLL_MS = 5 * 60 * 1000; // 5 min, only when WS is confirmed down
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const status = useAuthStore((s) => s.status);
@@ -29,38 +28,43 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     (s) => (s.user as unknown as { company?: { id?: number } } | null)?.company?.id,
   );
   const qc = useQueryClient();
-  const wsConnected = useRef(false);
 
   useEffect(() => {
     if (status !== "authenticated" || !userId) return;
 
     let echo: EchoLike | null = null;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+    // Track previous state to avoid firing on every pusher retry
+    let prevWsState: "unknown" | "connected" | "down" = "unknown";
 
-    // Called once on mount and only when WS is confirmed down
     const refreshCounts = async () => {
       try {
-        const n = await notificationsApi.unreadCount();
+        const [n, c] = await Promise.all([
+          notificationsApi.unreadCount(),
+          conversationsApi.unreadCount(),
+        ]);
         useNotificationsStore.getState().setUnreadCount(n.count);
-      } catch { /* ignore */ }
-      try {
-        const c = await conversationsApi.unreadCount();
         useMessagesStore.getState().setUnreadCount(c.unread_count);
       } catch { /* ignore */ }
     };
 
-    const startFallbackPolling = () => {
-      if (fallbackInterval) return; // already polling
-      // Initial fetch immediately when fallback kicks in
+    const onWsConnected = () => {
+      if (prevWsState === "connected") return; // already connected, skip
+      prevWsState = "connected";
+      // Stop fallback polling — WS handles everything now
+      if (fallbackInterval) { clearInterval(fallbackInterval); fallbackInterval = null; }
+      // Fetch once to sync any updates missed during disconnect
       void refreshCounts();
-      fallbackInterval = setInterval(refreshCounts, FALLBACK_POLL_MS);
     };
 
-    const stopFallbackPolling = () => {
-      if (fallbackInterval) {
-        clearInterval(fallbackInterval);
-        fallbackInterval = null;
+    const onWsDown = () => {
+      if (prevWsState === "down") return; // already down, skip duplicate events
+      prevWsState = "down";
+      // Start fallback polling — only if not already running
+      if (!fallbackInterval) {
+        fallbackInterval = setInterval(refreshCounts, FALLBACK_POLL_MS);
       }
+      // Do NOT call refreshCounts() here — the interval will handle it
     };
 
     /** Handle an event from user.{id} or company.{id} channel */
@@ -162,59 +166,33 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       const token = getToken();
-      if (!token) {
-        startFallbackPolling();
-        return;
-      }
+      if (!token) return;
+
+      // Initial fetch on mount — one time only
+      void refreshCounts();
 
       try {
         echo = await createEcho(token);
 
-        // Access the underlying Pusher instance to track connection state
-        const pusher = (echo as unknown as { connector?: { pusher?: {
-          connection?: {
-            bind: (event: string, cb: () => void) => void;
+        // Track connection state via Pusher's connection object
+        const pusher = (echo as unknown as {
+          connector?: { pusher?: { connection?: {
+            bind: (ev: string, cb: () => void) => void;
             state: string;
-          }
-        } } })?.connector?.pusher;
+          }}}
+        })?.connector?.pusher;
 
         if (pusher?.connection) {
           const conn = pusher.connection;
+          conn.bind("connected",    onWsConnected);
+          conn.bind("disconnected", onWsDown);
+          conn.bind("failed",       onWsDown);
+          conn.bind("unavailable",  onWsDown);
 
-          // Connected → stop polling, rely on WS
-          conn.bind("connected", () => {
-            wsConnected.current = true;
-            stopFallbackPolling();
-            // Fetch once on connect to sync any missed updates
-            void refreshCounts();
-          });
-
-          // Disconnected/failed → start fallback polling
-          conn.bind("disconnected", () => {
-            wsConnected.current = false;
-            startFallbackPolling();
-          });
-          conn.bind("failed", () => {
-            wsConnected.current = false;
-            startFallbackPolling();
-          });
-          conn.bind("unavailable", () => {
-            wsConnected.current = false;
-            startFallbackPolling();
-          });
-
-          // If already connected when we check
-          if (conn.state === "connected") {
-            wsConnected.current = true;
-            void refreshCounts();
-          } else {
-            // Not connected yet — start fallback until we confirm connection
-            startFallbackPolling();
-          }
-        } else {
-          // Can't track connection state — use fallback polling
-          startFallbackPolling();
+          // Already connected by the time we check
+          if (conn.state === "connected") onWsConnected();
         }
+        // If we can't track state, just leave the one-time fetch from above
 
         // ── user.{id} channel ──────────────────────────────────────────
         const userChannel = echo.private(`user.${userId}`);
@@ -253,14 +231,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch {
-        // WebSocket unavailable — fall back to polling
-        wsConnected.current = false;
-        startFallbackPolling();
+        // WS completely failed to initialize — leave fallback polling running
+        onWsDown();
       }
     })();
 
     return () => {
-      stopFallbackPolling();
+      if (fallbackInterval) clearInterval(fallbackInterval);
       try {
         echo?.leave(`user.${userId}`);
         if (role === "company" && companyId) echo?.leave(`company.${companyId}`);
