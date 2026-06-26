@@ -1,14 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ThumbsUp, Heart, Star, HandHeart, Laugh,
-  MessageSquare, Share2, Bookmark, Loader2,
-  Link2, Repeat2, Send, X, Globe, Users, Lock,
-  Search, CheckCircle2, ArrowRight,
+  ArrowRight,
+  Bold,
+  Bookmark,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Globe,
+  HandHeart,
+  Heart,
+  Italic,
+  Laugh,
+  Link2,
+  List,
+  Loader2,
+  Lock,
+  MessageSquare,
+  Repeat2,
+  Search,
+  Send,
+  Share2,
+  Star,
+  ThumbsUp,
+  Users,
+  X,
 } from "lucide-react";
 import { cn, imgUrl } from "@/lib/utils";
+import { PostContent } from "@/components/social/post-content";
 import { socialApi } from "@/lib/api/endpoints/social";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -225,6 +246,8 @@ function ShareModal({
 
   // Repost state
   const [repostCaption, setRepostCaption] = useState("");
+  const [repostPreview, setRepostPreview] = useState(false);
+  const repostTaRef = useRef<HTMLTextAreaElement>(null);
   const [visibility, setVisibility] = useState<"public" | "connections" | "private">("public");
 
   // Direct send state
@@ -361,13 +384,49 @@ function ShareModal({
         {/* ── Repost ── */}
         {mode === "repost" && (
           <div className="p-4 space-y-3">
-            <textarea
-              value={repostCaption}
-              onChange={(e) => setRepostCaption(e.target.value)}
-              placeholder="Add a comment… (optional)"
-              rows={3}
-              className="w-full resize-none rounded-xl border border-line bg-elevated px-3 py-2.5 text-sm outline-none focus:border-brand"
-            />
+            {/* Markdown toolbar */}
+            <div className="flex items-center gap-0.5">
+              {([
+                { icon: Bold,   title: "Bold",    wrap: ["**","**","bold text"] },
+                { icon: Italic, title: "Italic",  wrap: ["*","*","italic"] },
+                { icon: List,   title: "List",    wrap: ["- ","","item"] },
+              ] as { icon: React.ElementType; title: string; wrap: [string,string,string] }[]).map(({ icon: Icon, title, wrap }) => (
+                <button key={title} type="button" title={title}
+                  onClick={() => {
+                    const ta = repostTaRef.current;
+                    if (!ta) return;
+                    const s = ta.selectionStart, e = ta.selectionEnd;
+                    const sel = repostCaption.slice(s, e) || wrap[2];
+                    const next = repostCaption.slice(0, s) + wrap[0] + sel + wrap[1] + repostCaption.slice(e);
+                    setRepostCaption(next);
+                    setTimeout(() => { ta.focus(); ta.setSelectionRange(s + wrap[0].length, s + wrap[0].length + sel.length); }, 0);
+                  }}
+                  className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-elevated hover:text-ink"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </button>
+              ))}
+              <button type="button" onClick={() => setRepostPreview((v) => !v)}
+                className="ml-auto flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs text-faint hover:bg-elevated hover:text-ink">
+                {repostPreview ? <><EyeOff className="h-3.5 w-3.5" /> Edit</> : <><Eye className="h-3.5 w-3.5" /> Preview</>}
+              </button>
+            </div>
+            {repostPreview ? (
+              <div className="min-h-[72px] rounded-xl border border-line bg-elevated px-3 py-2.5 text-sm">
+                {repostCaption.trim()
+                  ? <PostContent content={repostCaption} contentFormat="markdown" />
+                  : <span className="text-faint">Nothing to preview yet…</span>}
+              </div>
+            ) : (
+              <textarea
+                ref={repostTaRef}
+                value={repostCaption}
+                onChange={(e) => setRepostCaption(e.target.value)}
+                placeholder="Add a comment… (optional) — Markdown supported"
+                rows={3}
+                className="w-full resize-none rounded-xl border border-line bg-elevated px-3 py-2.5 text-sm outline-none focus:border-brand"
+              />
+            )}
             {/* Visibility picker */}
             <div className="flex gap-2">
               {(["public", "connections", "private"] as const).map((v) => {
