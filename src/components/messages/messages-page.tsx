@@ -46,7 +46,7 @@ function MessageThread({
   const { data, isLoading } = useQuery({
     queryKey: ["messages", conversationId],
     queryFn: () => messagesApi.messages(conversationId),
-    refetchInterval: 30_000,
+    refetchInterval: 120_000, // 2 min — WebSocket handles real-time delivery
   });
   const messages = [...(data?.items ?? [])].reverse();
 
@@ -64,7 +64,7 @@ function MessageThread({
         // Invalidate query to fetch the new message; avoids duplicating state
         qc.invalidateQueries({ queryKey: ["messages", conversationId] });
         qc.invalidateQueries({ queryKey: ["conversations"] });
-        messagesApi.unreadCount().then(setUnread).catch(() => {});
+        // unread count updated globally by realtime-provider
       });
     }).catch(() => { /* WS unavailable — polling covers us */ });
 
@@ -81,9 +81,7 @@ function MessageThread({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  useEffect(() => {
-    messagesApi.unreadCount().then(setUnread).catch(() => {});
-  }, [setUnread, conversationId]);
+  // unread count is kept fresh by realtime-provider — no local polling needed
 
   const send = useCallback(async () => {
     if (!body.trim() && !mediaFile) return;
@@ -210,7 +208,7 @@ function ConversationList({
   const { data, isLoading } = useQuery({
     queryKey: ["conversations"],
     queryFn: () => messagesApi.conversations(),
-    refetchInterval: 30_000,  // reduced from 15s — WS handles real-time
+    refetchInterval: 120_000, // 2 min — WebSocket handles real-time delivery
   });
   const convs = data?.items ?? [];
 
