@@ -3,7 +3,7 @@
 import { imgUrl } from "@/lib/utils";
 import {
   Loader2, MapPin, Briefcase, GraduationCap, FolderGit2,
-  BadgeCheck, Github, Linkedin, Globe, Users, FileText,
+  BadgeCheck, Github, Linkedin, Globe, Users, FileText, Languages,
 } from "lucide-react";
 import { Container } from "@/components/ui/section";
 import { profileApi } from "@/lib/api/endpoints/profile";
@@ -189,6 +189,22 @@ export function PublicCandidate({ id }: { id: number }) {
                   {e.issuer && <p className="text-sm text-muted">{e.issuer}</p>}
                 </div>
                 {e.date && <p className="readout text-xs text-faint">{fmt(e.date)}</p>}
+              </div>
+            ))}
+          </Block>
+        ) : null}
+
+        {/* Languages */}
+        {(p.languages_spoken as { language?: string; proficiency?: string }[] | undefined)?.length ? (
+          <Block icon={Languages} title="Languages">
+            {(p.languages_spoken as { language?: string; proficiency?: string }[]).map((l, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <p className="text-sm font-semibold">{l.language}</p>
+                {l.proficiency && (
+                  <span className="readout rounded-full bg-elevated px-2.5 py-0.5 text-xs capitalize text-muted">
+                    {l.proficiency}
+                  </span>
+                )}
               </div>
             ))}
           </Block>

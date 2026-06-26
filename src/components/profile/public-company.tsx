@@ -3,7 +3,7 @@
 import { imgUrl } from "@/lib/utils";
 import {
   Loader2, Building2, Globe, MapPin, Users,
-  CalendarDays, Briefcase, FileText,
+  CalendarDays, Briefcase, FileText, Linkedin, Twitter, Phone, BadgeCheck,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -63,8 +63,18 @@ export function PublicCompany({ id }: { id: number }) {
             )}
           </div>
 
-          <h1 className="mt-4 font-display text-2xl font-extrabold tracking-tight">{c.name}</h1>
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            <h1 className="font-display text-2xl font-extrabold tracking-tight">{c.name}</h1>
+            {(c as { is_verified?: boolean }).is_verified && (
+              <BadgeCheck className="h-5 w-5 text-brand" aria-label="Verified" />
+            )}
+          </div>
           {c.industry && <p className="mt-1 text-muted">{c.industry}</p>}
+          {(c as { tagline?: string | null }).tagline && (
+            <p className="mt-1 text-sm text-faint italic">
+              {(c as { tagline: string }).tagline}
+            </p>
+          )}
 
           {/* Stats row */}
           {stats && (
@@ -98,6 +108,24 @@ export function PublicCompany({ id }: { id: number }) {
                 className="flex items-center gap-1.5 text-brand hover:underline">
                 <Globe className="h-4 w-4" />Website
               </a>
+            )}
+            {(c as { linkedin_url?: string | null }).linkedin_url && (
+              <a href={(c as { linkedin_url: string }).linkedin_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-brand hover:underline">
+                <Linkedin className="h-4 w-4" />LinkedIn
+              </a>
+            )}
+            {(c as { twitter_url?: string | null }).twitter_url && (
+              <a href={(c as { twitter_url: string }).twitter_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-brand hover:underline">
+                <Twitter className="h-4 w-4" />Twitter
+              </a>
+            )}
+            {(c as { phone?: string | null }).phone && (
+              <span className="flex items-center gap-1.5">
+                <Phone className="h-4 w-4 text-faint" />
+                {(c as { phone: string }).phone}
+              </span>
             )}
           </div>
 

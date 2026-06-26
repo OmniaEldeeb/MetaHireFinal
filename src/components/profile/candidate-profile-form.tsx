@@ -161,6 +161,9 @@ export function CandidateProfileForm({ user }: { user: ProfileUser }) {
   async function onSubmit(v: FormValues) {
     setFormError(null);
     try {
+      // Backend validates dates as nullable|date — empty string fails, must send null
+      const cleanDate = (d: string) => d.trim() === "" ? undefined : d;
+
       const updated = await profileApi.update({
         name: v.name,
         phone: clean(v.phone),
@@ -172,10 +175,37 @@ export function CandidateProfileForm({ user }: { user: ProfileUser }) {
         portfolio_url: clean(v.portfolio_url),
         open_to_work: v.open_to_work,
         skills: v.skills,
-        experience: v.experience.filter((e) => e.title || e.company),
-        education: v.education.filter((e) => e.degree || e.school),
-        projects: v.projects.filter((e) => e.name),
-        certifications: v.certifications.filter((e) => e.name),
+        experience: v.experience
+          .filter((e) => e.title || e.company)
+          .map((e) => ({
+            title: e.title,
+            company: e.company,
+            start_date: cleanDate(e.start_date),
+            end_date: cleanDate(e.end_date),
+            description: clean(e.description) ?? undefined,
+          })),
+        education: v.education
+          .filter((e) => e.degree || e.school)
+          .map((e) => ({
+            degree: e.degree,
+            school: e.school,
+            start_date: cleanDate(e.start_date),
+            end_date: cleanDate(e.end_date),
+          })),
+        projects: v.projects
+          .filter((e) => e.name)
+          .map((e) => ({
+            name: e.name,
+            description: clean(e.description) ?? undefined,
+            url: clean(e.url) ?? undefined,
+          })),
+        certifications: v.certifications
+          .filter((e) => e.name)
+          .map((e) => ({
+            name: e.name,
+            issuer: clean(e.issuer) ?? undefined,
+            date: cleanDate(e.date),
+          })),
       });
       if (role) setUser(updated.user, role);
       // Reset form with the fresh data from the API response
