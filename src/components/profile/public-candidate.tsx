@@ -6,7 +6,9 @@ import {
   BadgeCheck, Github, Linkedin, Globe, Users, FileText, Languages,
 } from "lucide-react";
 import { Container } from "@/components/ui/section";
+import { useState } from "react";
 import { profileApi } from "@/lib/api/endpoints/profile";
+import { ConnectionsModal } from "./connections-modal";
 import { useQuery } from "@tanstack/react-query";
 import { PostCard } from "@/components/social/post-card";
 import { ProfileActions } from "./profile-actions";
@@ -32,6 +34,7 @@ function Block({ icon: Icon, title, children }: {
 }
 
 export function PublicCandidate({ id }: { id: number }) {
+  const [showConnections, setShowConnections] = useState(false);
   const { data, isLoading, isError } = useQuery({
     queryKey: ["user", id],
     queryFn: () => profileApi.getUser(id),
@@ -57,6 +60,7 @@ export function PublicCandidate({ id }: { id: number }) {
   const posts = (data.posts?.data ?? []) as Post[];
 
   return (
+    <>
     <Container className="max-w-3xl py-8">
       {/* Header card */}
       <div className="rounded-2xl border border-line bg-surface p-6">
@@ -87,9 +91,13 @@ export function PublicCandidate({ id }: { id: number }) {
             {stats && (
               <div className="mt-3 flex items-center gap-4 text-sm text-muted">
                 {stats.connections_count !== undefined && (
-                  <span className="flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5" />{stats.connections_count} connection{stats.connections_count !== 1 ? "s" : ""}
-                  </span>
+                  <button
+                    onClick={() => setShowConnections(true)}
+                    className="flex items-center gap-1.5 hover:text-brand hover:underline transition-colors"
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    {stats.connections_count} connection{stats.connections_count !== 1 ? "s" : ""}
+                  </button>
                 )}
                 {stats.posts_count !== undefined && (
                   <span className="flex items-center gap-1.5">
@@ -223,5 +231,7 @@ export function PublicCandidate({ id }: { id: number }) {
         )}
       </div>
     </Container>
+    {showConnections && <ConnectionsModal onClose={() => setShowConnections(false)} />}
+    </>
   );
 }

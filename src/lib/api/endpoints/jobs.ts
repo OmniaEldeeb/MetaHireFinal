@@ -13,6 +13,8 @@ export interface Job {
   id: number;
   title: string;
   description?: string;
+  description_html?: string | null;   // full HTML doc — render in iframe srcDoc
+  description_json?: unknown | null;  // Tiptap/sections JSON — for editor
   target_role?: string;
   location?: string;
   work_type?: WorkType;

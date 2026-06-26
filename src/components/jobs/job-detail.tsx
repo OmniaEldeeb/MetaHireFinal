@@ -156,10 +156,21 @@ export function JobDetail({ id }: { id: number }) {
         </div>
       </div>
 
-      {job.description && (
+      {(job.description_html || job.description) && (
         <section className="mt-6 rounded-2xl border border-line bg-surface p-6">
           <h2 className="font-display text-lg font-bold tracking-tight">About the role</h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{job.description}</p>
+          {job.description_html ? (
+            <iframe
+              srcDoc={job.description_html}
+              className="mt-3 w-full rounded-xl"
+              style={{ minHeight: 360, border: "none" }}
+              title="Job description"
+            />
+          ) : (
+            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">
+              {job.description}
+            </p>
+          )}
         </section>
       )}
 

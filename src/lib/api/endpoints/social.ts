@@ -35,6 +35,26 @@ export interface Post {
   updated_at?: string;
   shared_job_id?: number | null;
   shared_post_id?: number | null;
+  // Confirmed from PostResource: shared_job loaded via whenLoaded('sharedJob')
+  shared_job?: {
+    id: number;
+    title: string;
+    description?: string;
+    description_html?: string | null;
+    location?: string;
+    work_type?: string;
+    work_model?: string;
+    experience_level?: string;
+    salary_range?: string;
+    skills?: string[];
+    is_active?: boolean;
+    company?: {
+      id?: number;
+      name?: string;
+      logo?: string | null;
+      logo_url?: string | null;
+    };
+  } | null;
   // Confirmed from actual API response: shared_post included when type='share'
   shared_post?: Post | null;
 }

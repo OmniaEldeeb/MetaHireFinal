@@ -5,9 +5,11 @@ import { api } from "../client";
 export interface NetworkUser {
   id: number;
   role?: string;
-  name?: string;           // display name (company name or personal name)
-  display_name?: string;   // same as name — kept for consistency
+  name?: string;
+  display_name?: string;
   display_image?: string | null;
+  profile_image_url?: string | null;  // candidate avatar
+  logo_url?: string | null;           // company logo
   headline?: string | null;
   slug?: string | null;
 }

@@ -7,10 +7,12 @@ import { useIntersectionObserver } from "@/lib/hooks/use-intersection";
 import {
   Image as ImageIcon, X, Globe, Users, Lock,
   MoreVertical, Trash2, Loader2, Pencil, Check, Bookmark,
+  Briefcase, MapPin, ExternalLink,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socialApi, type Post } from "@/lib/api/endpoints/social";
 import { ReactionBar } from "./reaction-bar";
+import { PostContent } from "./post-content";
 import { CommentsSection } from "./comments-section";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
@@ -230,24 +232,86 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
           </div>
         </div>
       ) : post.content ? (
-        <p className="mt-4 whitespace-pre-line text-[0.95rem] leading-relaxed">
-          {post.content}
-        </p>
+        <div className="mt-4">
+          <PostContent content={post.content} contentFormat={post.content_format} />
+        </div>
       ) : null}
 
-      {/* Quoted / shared original post — clicking navigates to the original post */}
-      {post.shared_post && (
-        <a
-          href={`/posts/${post.shared_post.id}`}
-          className="mt-3 block rounded-xl border border-line bg-elevated p-3 hover:border-brand transition-colors cursor-pointer"
-          onClick={(e) => {
-            // Don't navigate if user clicked a video control
-            if ((e.target as HTMLElement).closest("video")) e.preventDefault();
-          }}
+      {/* Shared job posting — type=job_share */}
+      {post.shared_job && (
+        <Link
+          href={`/jobs/${post.shared_job.id}`}
+          className="mt-3 block rounded-xl border border-line bg-elevated hover:border-brand transition-colors overflow-hidden"
         >
-          {/* Original author */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-[0.6rem] font-bold text-brand">
+          {/* Company header */}
+          <div className="flex items-center gap-2.5 px-4 pt-3 pb-2 border-b border-line">
+            <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-surface">
+              {post.shared_job.company?.logo_url || post.shared_job.company?.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imgUrl(post.shared_job.company.logo_url ?? post.shared_job.company.logo) ?? ""}
+                  alt="" className="h-full w-full object-cover"
+                />
+              ) : (
+                <Briefcase className="h-4 w-4 text-faint" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold truncate">{post.shared_job.company?.name}</p>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-faint" />
+          </div>
+
+          {/* Job details */}
+          <div className="px-4 py-3">
+            <p className="text-sm font-bold text-ink">{post.shared_job.title}</p>
+            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+              {post.shared_job.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3 text-faint" />{post.shared_job.location}
+                </span>
+              )}
+              {post.shared_job.work_model && (
+                <span className="capitalize">{post.shared_job.work_model.replace(/_/g, " ")}</span>
+              )}
+              {post.shared_job.work_type && (
+                <span className="capitalize">{post.shared_job.work_type.replace(/_/g, " ")}</span>
+              )}
+              {post.shared_job.experience_level && (
+                <span className="capitalize">{post.shared_job.experience_level}</span>
+              )}
+              {post.shared_job.salary_range && (
+                <span className="font-medium text-brand">{post.shared_job.salary_range}</span>
+              )}
+            </div>
+            {post.shared_job.skills && post.shared_job.skills.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {post.shared_job.skills.slice(0, 5).map((s) => (
+                  <span key={s} className="rounded-md bg-brand-soft px-2 py-0.5 text-[0.65rem] font-medium text-brand">
+                    {s}
+                  </span>
+                ))}
+                {post.shared_job.skills.length > 5 && (
+                  <span className="text-[0.65rem] text-faint">+{post.shared_job.skills.length - 5} more</span>
+                )}
+              </div>
+            )}
+            <p className="mt-2.5 text-xs font-medium text-brand">View job →</p>
+          </div>
+        </Link>
+      )}
+
+      {/* Quoted / shared original post */}
+      {post.shared_post && (
+        <div className="mt-3 rounded-xl border border-line bg-elevated overflow-hidden">
+          {/* Original author header */}
+          <div className="flex items-center gap-2.5 px-4 pt-3 pb-2 border-b border-line">
+            <Link
+              href={post.shared_post.author?.role === "company"
+                ? `/companies/${post.shared_post.author?.id}`
+                : `/users/${post.shared_post.author?.id}`}
+              className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-surface text-xs font-bold text-brand"
+            >
               {post.shared_post.author?.display_image || post.shared_post.author?.candidate_profile?.profile_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -257,33 +321,54 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
               ) : (
                 authorName(post.shared_post.author).charAt(0)
               )}
-            </span>
-            <span className="text-xs font-semibold">{authorName(post.shared_post.author)}</span>
-            {post.shared_post.created_at && (
-              <span className="text-xs text-faint ml-auto">
-                {new Date(post.shared_post.created_at).toLocaleDateString()}
-              </span>
-            )}
+            </Link>
+            <div className="min-w-0 flex-1">
+              <Link
+                href={post.shared_post.author?.role === "company"
+                  ? `/companies/${post.shared_post.author?.id}`
+                  : `/users/${post.shared_post.author?.id}`}
+                className="text-sm font-semibold hover:underline"
+              >
+                {authorName(post.shared_post.author)}
+              </Link>
+              {post.shared_post.created_at && (
+                <p className="text-xs text-faint">
+                  {new Date(post.shared_post.created_at).toLocaleDateString(undefined, {
+                    year: "numeric", month: "short", day: "numeric",
+                  })}
+                </p>
+              )}
+            </div>
+            <Link
+              href={`/posts/${post.shared_post.id}`}
+              className="shrink-0 text-xs text-brand hover:underline"
+            >
+              View →
+            </Link>
           </div>
           {/* Original content */}
-          {post.shared_post.content && (
-            <p className="text-sm text-muted leading-relaxed line-clamp-4">
-              {post.shared_post.content}
-            </p>
-          )}
-          {/* Original media (first image/video only) */}
-          {post.shared_post.media_urls?.[0] && (() => {
-            const url = post.shared_post.media_urls![0];
-            const isVideo = /\.(mp4|webm)(\?|$)/i.test(url);
-            return isVideo ? (
-              <video src={imgUrl(url) ?? ""} controls className="mt-2 w-full rounded-lg max-h-48 bg-black" />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imgUrl(url) ?? ""} alt="" className="mt-2 w-full rounded-lg object-cover max-h-48" />
-            );
-          })()}
-          <p className="mt-2 text-[0.65rem] text-brand">View original post →</p>
-        </a>
+          <div className="px-4 py-3">
+            {post.shared_post.content && (
+              <div className="line-clamp-6 text-sm text-muted">
+                <PostContent
+                  content={post.shared_post.content}
+                  contentFormat={post.shared_post.content_format}
+                />
+              </div>
+            )}
+            {/* Original media */}
+            {post.shared_post.media_urls?.[0] && (() => {
+              const url = post.shared_post.media_urls![0];
+              const isVideo = /\.(mp4|webm)(\?|$)/i.test(url);
+              return isVideo ? (
+                <video src={imgUrl(url) ?? ""} controls className="mt-2 w-full rounded-lg max-h-48 bg-black" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={imgUrl(url) ?? ""} alt="" className="mt-2 w-full rounded-lg object-cover max-h-48" />
+              );
+            })()}
+          </div>
+        </div>
       )}
 
       {/* Media */}
