@@ -29,12 +29,17 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   );
   const qc = useQueryClient();
 
+  // Track if the WS session is already initialized to prevent re-init on dep changes
+  const initializedRef = useRef(false);
+
   useEffect(() => {
     if (status !== "authenticated" || !userId) return;
+    // Already set up — don't tear down and rebuild on every dep change
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
     let echo: EchoLike | null = null;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
-    // Track previous state to avoid firing on every pusher retry
     let prevWsState: "unknown" | "connected" | "down" = "unknown";
 
     const refreshCounts = async () => {
@@ -236,6 +241,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     })();
 
     return () => {
+      initializedRef.current = false;
       if (fallbackInterval) clearInterval(fallbackInterval);
       try {
         echo?.leave(`user.${userId}`);
