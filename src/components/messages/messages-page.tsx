@@ -133,11 +133,44 @@ function MessageThread({
                     : "bg-elevated text-ink",
                 )}
               >
-                {m.body && <p className="leading-relaxed">{m.body}</p>}
-                {m.media_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imgUrl(m.media_url) ?? ""} alt="" className="mt-2 rounded-xl max-w-xs" />
+                {/* Body — linkify URLs */}
+                {m.body && (
+                  <p className="leading-relaxed whitespace-pre-wrap break-words">
+                    {m.body.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                      /^https?:\/\//.test(part) ? (
+                        <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+                          className={cn("underline break-all", isMine(m) ? "text-white/90 hover:text-white" : "text-brand hover:text-brand-strong")}>
+                          {part}
+                        </a>
+                      ) : part
+                    )}
+                  </p>
                 )}
+                {/* Media — proxied through /api/storage to bypass ngrok warning */}
+                {m.media_url && (() => {
+                  const proxied = `/api/storage?url=${encodeURIComponent(m.media_url!)}`;
+                  const type = m.media_type ?? (
+                    /\.(mp4|webm)(\?|$)/i.test(m.media_url) ? "video" :
+                    /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(m.media_url) ? "image" : "file"
+                  );
+                  if (type === "image") return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={proxied} alt="" className="mt-2 rounded-xl max-w-xs cursor-pointer"
+                      onClick={() => window.open(proxied, "_blank")} />
+                  );
+                  if (type === "video") return (
+                    <video src={proxied} controls className="mt-2 rounded-xl max-w-xs bg-black" />
+                  );
+                  // file (PDF, Word, etc.)
+                  const filename = m.media_url.split("/").pop() ?? "attachment";
+                  return (
+                    <a href={proxied} target="_blank" rel="noopener noreferrer" download
+                      className={cn("mt-2 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs hover:opacity-80",
+                        isMine(m) ? "border-white/30 text-white" : "border-line text-brand")}>
+                      📎 {filename}
+                    </a>
+                  );
+                })()}
                 <p className={cn("mt-1 text-[0.65rem]", isMine(m) ? "text-white/60" : "text-faint")}>
                   {timeAgo(m.created_at)}
                 </p>
