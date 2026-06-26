@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
@@ -144,8 +144,14 @@ export function CandidateProfileForm({ user }: { user: ProfileUser }) {
     control,
     handleSubmit,
     setError,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ defaultValues: defaults(user) });
+
+  // Re-initialize form whenever the user prop changes (after save + refetch)
+  useEffect(() => {
+    reset(defaults(user));
+  }, [user, reset]);
 
   const exp = useFieldArray({ control, name: "experience" });
   const edu = useFieldArray({ control, name: "education" });
@@ -172,6 +178,9 @@ export function CandidateProfileForm({ user }: { user: ProfileUser }) {
         certifications: v.certifications.filter((e) => e.name),
       });
       if (role) setUser(updated.user, role);
+      // Reset form with the fresh data from the API response
+      // so all fields reflect what was actually saved
+      reset(defaults(updated.user));
       qc.invalidateQueries({ queryKey: ["me-profile"] });
       toast({ kind: "success", title: "Profile saved" });
     } catch (err) {

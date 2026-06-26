@@ -10,6 +10,8 @@ export function CandidateProfile() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["me-profile"],
     queryFn: profileApi.me,
+    staleTime: 0,       // always refetch when page is visited
+    refetchOnMount: true,
   });
 
   if (isLoading) {
@@ -29,7 +31,7 @@ export function CandidateProfile() {
 
   return (
     <Container className="max-w-3xl py-8">
-      <CandidateProfileForm key={data.user.id} user={data.user} />
+      <CandidateProfileForm key={`${data.user.id}-${data.user.candidate_profile?.headline ?? ""}-${(data.user.candidate_profile?.skills ?? []).length}`} user={data.user} />
     </Container>
   );
 }

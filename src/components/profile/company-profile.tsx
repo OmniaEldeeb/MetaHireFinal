@@ -22,6 +22,8 @@ export function CompanyProfile() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["me-company"],
     queryFn: companyApi.me,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   if (isLoading) {
@@ -64,7 +66,7 @@ export function CompanyProfile() {
       </div>
 
       <div className="mt-6">
-        {tab === "info" ? <CompanyInfoForm company={data.company} /> : null}
+        {tab === "info" ? <CompanyInfoForm key={`${data.company.id}-${data.company.tagline ?? ""}`} company={data.company} /> : null}
         {tab === "locations" ? <CompanyLocations /> : null}
         {tab === "team" ? <CompanyTeam /> : null}
       </div>
