@@ -170,6 +170,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
       // Initial fetch on mount — one time only
       void refreshCounts();
+      let hasRefreshedOnConnect = false;
 
       try {
         echo = await createEcho(token);

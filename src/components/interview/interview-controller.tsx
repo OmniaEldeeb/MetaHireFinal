@@ -75,12 +75,13 @@ export function InterviewController({
         });
     }
 
-    // Tear down when the interview ends (done/idle/error) or when interviewId
-    // is cleared (e.g. after reset()).
+    // Tear down when the interview ends — just leave the channel, keep connection alive
+    // Disconnecting creates a new Pusher connection cycle that spams refreshCounts
     if (!id || (phase && !activePhases.includes(phase))) {
       if (echoRef.current) {
         orchestratorRef.current?.unsubscribeInterviewChannel();
-        try { echoRef.current.disconnect(); } catch { /* ignore */ }
+        // Don't disconnect — let the existing connection stay alive
+        // The channel is already left via unsubscribeInterviewChannel()
         echoRef.current = null;
       }
     }
@@ -99,14 +100,12 @@ export function InterviewController({
     }
   }, [orchState?.phase, orchState?.webcamGranted]);
 
-  // Cleanup on unmount — abort the session and tear down the WS connection.
+  // Cleanup on unmount — abort session, leave interview channel but keep WS alive
   useEffect(() => {
     return () => {
       orchestratorRef.current?.abort();
-      if (echoRef.current) {
-        try { echoRef.current.disconnect(); } catch { /* ignore */ }
-        echoRef.current = null;
-      }
+      // Don't disconnect echo — prevents Pusher reconnect cycle that spams polls
+      echoRef.current = null;
     };
   }, []);
 
