@@ -2,12 +2,13 @@
 
 import { imgUrl } from "@/lib/utils";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useIntersectionObserver } from "@/lib/hooks/use-intersection";
 import {
   Image as ImageIcon, X, Globe, Users, Lock,
   MoreVertical, Trash2, Loader2, Pencil, Check, Bookmark,
   Briefcase, MapPin, ExternalLink,
+  Bold, Italic, Heading2, List, Eye, EyeOff,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { socialApi, type Post } from "@/lib/api/endpoints/social";
@@ -77,6 +78,22 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
   const isOwn = post.user_id === user?.id || post.author?.id === user?.id;
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content ?? "");
+  const [editPreview, setEditPreview] = useState(false);
+  const editTaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertEditMd = (before: string, after = "", placeholder = "") => {
+    const ta = editTaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = editContent.slice(start, end) || placeholder;
+    const next = editContent.slice(0, start) + before + selected + after + editContent.slice(end);
+    setEditContent(next);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }, 0);
+  };
   const [editVisibility, setEditVisibility] = useState<"public" | "connections" | "private">(
     (post.visibility as "public" | "connections" | "private") ?? "public"
   );
@@ -201,13 +218,40 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
       {/* Content — edit mode or display mode */}
       {isEditing ? (
         <div className="mt-4 space-y-2">
-          <textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            rows={4}
-            autoFocus
-            className="w-full resize-none rounded-xl border border-brand bg-elevated px-3 py-2.5 text-sm outline-none"
-          />
+          {/* Markdown toolbar for edit mode */}
+          <div className="flex items-center gap-0.5">
+            {([
+              { icon: Bold,     title: "Bold",    fn: () => insertEditMd("**", "**", "bold") },
+              { icon: Italic,   title: "Italic",  fn: () => insertEditMd("*", "*", "italic") },
+              { icon: Heading2, title: "Heading", fn: () => insertEditMd("## ", "", "Heading") },
+              { icon: List,     title: "List",    fn: () => insertEditMd("- ", "", "item") },
+            ] as { icon: React.ElementType; title: string; fn: () => void }[]).map(({ icon: Icon, title, fn }) => (
+              <button key={title} type="button" title={title} onClick={fn}
+                className="grid h-6 w-6 place-items-center rounded text-faint hover:bg-elevated hover:text-ink">
+                <Icon className="h-3 w-3" />
+              </button>
+            ))}
+            <button type="button" onClick={() => setEditPreview((v) => !v)}
+              className="ml-auto flex items-center gap-1 rounded px-2 py-0.5 text-xs text-faint hover:bg-elevated hover:text-ink">
+              {editPreview
+                ? <><EyeOff className="h-3 w-3" /> Edit</>
+                : <><Eye    className="h-3 w-3" /> Preview</>}
+            </button>
+          </div>
+          {editPreview ? (
+            <div className="min-h-[80px] rounded-xl border border-brand bg-elevated px-3 py-2.5 text-sm">
+              <PostContent content={editContent} contentFormat="markdown" />
+            </div>
+          ) : (
+            <textarea
+              ref={editTaRef}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={4}
+              autoFocus
+              className="w-full resize-none rounded-xl border border-brand bg-elevated px-3 py-2.5 text-sm outline-none"
+            />
+          )}
           <div className="flex items-center gap-2">
             <select
               value={editVisibility}
@@ -423,10 +467,30 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
   const [visibility, setVisibility] = useState<"public" | "connections" | "private">("public");
   const [media, setMedia] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Insert markdown syntax around selection or at cursor
+  const insertMd = (before: string, after = "", placeholder = "") => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = content.slice(start, end) || placeholder;
+    const newContent =
+      content.slice(0, start) + before + selected + after + content.slice(end);
+    setContent(newContent);
+    // Restore focus + selection after state update
+    setTimeout(() => {
+      ta.focus();
+      const newStart = start + before.length;
+      ta.setSelectionRange(newStart, newStart + selected.length);
+    }, 0);
+  };
 
   const post = async () => {
-    if (!content.trim()) return;  // content is required by backend
+    if (!content.trim()) return;
     setBusy(true);
     try {
       const fd = new FormData();
@@ -437,6 +501,7 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
       await socialApi.createPost(fd);
       setContent("");
       setMedia([]);
+      setPreview(false);
       onCreated?.();
     } catch (err: unknown) {
       const apiErr = err as { message?: string; fieldErrors?: Record<string, string[]> };
@@ -455,13 +520,55 @@ export function CreatePost({ onCreated }: { onCreated?: () => void }) {
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-soft text-sm font-bold text-brand">
           {user?.name?.charAt(0) ?? "U"}
         </span>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={media.length > 0 ? "Add a caption… (required)" : "What's on your mind?"}
-          rows={3}
-          className="flex-1 resize-none rounded-xl border border-line bg-elevated px-3 py-2.5 text-sm outline-none focus:border-brand"
-        />
+        <div className="flex-1 min-w-0">
+          {/* Markdown toolbar */}
+          <div className="mb-1.5 flex items-center gap-0.5">
+            {[
+              { icon: Bold,     title: "Bold",        action: () => insertMd("**", "**", "bold text") },
+              { icon: Italic,   title: "Italic",      action: () => insertMd("*", "*", "italic text") },
+              { icon: Heading2, title: "Heading",     action: () => insertMd("## ", "", "Heading") },
+              { icon: List,     title: "Bullet list", action: () => insertMd("- ", "", "list item") },
+            ].map(({ icon: Icon, title, action }) => (
+              <button
+                key={title}
+                type="button"
+                title={title}
+                onClick={action}
+                className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-elevated hover:text-ink"
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </button>
+            ))}
+            <div className="ml-auto">
+              <button
+                type="button"
+                onClick={() => setPreview((v) => !v)}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-faint hover:bg-elevated hover:text-ink"
+              >
+                {preview
+                  ? <><EyeOff className="h-3.5 w-3.5" /> Edit</>
+                  : <><Eye    className="h-3.5 w-3.5" /> Preview</>}
+              </button>
+            </div>
+          </div>
+
+          {preview ? (
+            <div className="min-h-[72px] rounded-xl border border-line bg-elevated px-3 py-2.5 text-sm">
+              {content.trim()
+                ? <PostContent content={content} contentFormat="markdown" />
+                : <span className="text-faint">Nothing to preview yet…</span>}
+            </div>
+          ) : (
+            <textarea
+              ref={taRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={media.length > 0 ? "Add a caption… (required)" : "What's on your mind? Markdown supported: **bold**, *italic*, - lists"}
+              rows={3}
+              className="w-full resize-none rounded-xl border border-line bg-elevated px-3 py-2.5 text-sm outline-none focus:border-brand"
+            />
+          )}
+        </div>
       </div>
 
       {media.length > 0 && (
