@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   X, Loader2, TrendingUp, AlertCircle, Lightbulb,
@@ -8,7 +9,6 @@ import {
   Briefcase, User, GraduationCap, FolderGit2, RefreshCw, Info,
 } from "lucide-react";
 import { cvApi } from "@/lib/api/endpoints/cv";
-import { CvCompareModal } from "@/components/cv/cv-compare-modal";
 import { useToastStore } from "@/stores/toast.store";
 import type { CvReport, CvScoreBreakdown } from "@/lib/api/endpoints/cv";
 
@@ -375,13 +375,13 @@ function ReportNoJob({ data }: { data: CvReport }) {
 // ── Main modal ────────────────────────────────────────────────────────────────
 
 export function CvReportModal({ cvId, onClose }: { cvId: number; onClose: () => void }) {
+  const router = useRouter();
   const toast = useToastStore((s) => s.push);
   const qc = useQueryClient();
   const [jobDesc, setJobDesc] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [rebuiltCvId, setRebuiltCvId] = useState<number | null>(null);
-  const [showCompare, setShowCompare] = useState(false);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["cv-report", cvId, submitted ? jobDesc.trim().slice(0, 30) : ""],
@@ -488,16 +488,13 @@ export function CvReportModal({ cvId, onClose }: { cvId: number; onClose: () => 
             </button>
             {rebuiltCvId && (
               <button
-                onClick={() => setShowCompare(true)}
+                onClick={() => { onClose(); router.push(`/cv/compare/${cvId}/${rebuiltCvId}`); }}
                 className="flex items-center gap-2 rounded-xl border border-brand px-4 py-2 text-sm font-medium text-brand hover:bg-brand-soft"
               >
                 Compare versions
               </button>
             )}
           </div>
-        )}
-        {showCompare && rebuiltCvId && (
-          <CvCompareModal fromId={cvId} toId={rebuiltCvId} onClose={() => setShowCompare(false)} />
         )}
       </div>
     </div>

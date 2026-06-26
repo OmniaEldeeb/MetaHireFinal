@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Upload,
@@ -19,7 +20,6 @@ import { CvCard } from "@/components/cv/cv-card";
 import { UploadCvModal } from "@/components/cv/upload-cv-modal";
 import { BuildCvModal } from "@/components/cv/build-cv-modal";
 import { CvReportModal } from "@/components/cv/cv-report-modal";
-import { CvCompareModal } from "@/components/cv/cv-compare-modal";
 import { cvApi } from "@/lib/api/endpoints/cv";
 import { useToastStore } from "@/stores/toast.store";
 
@@ -30,6 +30,7 @@ const TABS = [
 ];
 
 export function CvManager() {
+  const router = useRouter();
   const qc = useQueryClient();
   const toast = useToastStore((s) => s.push);
   const [tab, setTab] = useState("library");
@@ -37,7 +38,6 @@ export function CvManager() {
   const [showBuild, setShowBuild] = useState(false);
   const [reportCvId, setReportCvId] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [compareIds, setCompareIds] = useState<[number, number] | null>(null);
 
   const cvs = useQuery({ queryKey: ["cvs"], queryFn: cvApi.list });
   const favs = useQuery({
@@ -123,7 +123,7 @@ export function CvManager() {
             <button
               onClick={() => {
                 const [a, b] = [...selected];
-                setCompareIds([a, b]);
+                router.push(`/cv/compare/${a}/${b}`);
               }}
               className="inline-flex items-center gap-1.5 rounded-xl border border-brand/40 px-3 py-2 text-sm font-medium text-brand hover:bg-brand-soft"
             >
@@ -210,9 +210,6 @@ export function CvManager() {
       {showBuild && <BuildCvModal onClose={() => setShowBuild(false)} />}
       {reportCvId !== null && (
         <CvReportModal cvId={reportCvId} onClose={() => setReportCvId(null)} />
-      )}
-      {compareIds && (
-        <CvCompareModal fromId={compareIds[0]} toId={compareIds[1]} onClose={() => setCompareIds(null)} />
       )}
     </Container>
   );

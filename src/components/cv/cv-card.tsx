@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
@@ -19,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { cvApi, type Cv } from "@/lib/api/endpoints/cv";
 import { CvBuildModal } from "@/components/cv/cv-build-modal";
 import { CvEditModal } from "@/components/cv/cv-edit-modal";
-import { CvCompareModal } from "@/components/cv/cv-compare-modal";
 import { useToastStore } from "@/stores/toast.store";
 
 function formatDate(iso?: string) {
@@ -47,6 +47,7 @@ interface CvCardProps {
 }
 
 export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = false, compareWithId }: CvCardProps) {
+  const router = useRouter();
   const qc = useQueryClient();
   const toast = useToastStore((s) => s.push);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -55,7 +56,6 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
   const [busy, setBusy] = useState<string | null>(null);
   const [showBuild, setShowBuild] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [showCompare, setShowCompare] = useState(false);
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   // Optimistic local favorite state so star toggles instantly
   const [localFav, setLocalFav] = useState<boolean | null>(null);
@@ -219,7 +219,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
                       { icon: Pencil,     label: "Edit CV",     action: () => { setMenuOpen(false); setShowEdit(true); } },
                       { icon: Download,   label: "Export CV",   action: () => download() },
                       { icon: BarChart2,  label: "View report", action: () => { setMenuOpen(false); onViewReport(cv.id); } },
-                      ...(compareWithId ? [{ icon: GitCompare, label: "Compare versions", action: () => { setMenuOpen(false); setShowCompare(true); } }] : []),
+                      ...(compareWithId ? [{ icon: GitCompare, label: "Compare versions", action: () => { setMenuOpen(false); router.push(`/cv/compare/${compareWithId}/${cv.id}`); } }] : []),
                       { icon: Pencil,     label: "Rename",      action: () => { setMenuOpen(false); setRenaming(true); } },
                       { icon: RefreshCw,  label: "Rebuild AI",  action: doRebuild },
                       { icon: Trash2,     label: "Delete",      action: doDelete },
@@ -263,7 +263,6 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
     </div>
     {showBuild && <CvBuildModal cvId={cv.id} onClose={() => setShowBuild(false)} />}
     {showEdit && <CvEditModal cvId={cv.id} onClose={() => setShowEdit(false)} />}
-    {showCompare && compareWithId && <CvCompareModal fromId={compareWithId} toId={cv.id} onClose={() => setShowCompare(false)} />}
   </>
   );
 }
