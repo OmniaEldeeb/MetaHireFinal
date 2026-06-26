@@ -38,6 +38,10 @@ interface ScheduleValues {
   contact_email: string;
   duration_minutes: string;
   notes: string;
+  dress_code: string;
+  contact_phone: string;
+  interview_format_detail: string;
+  rounds: string;
 }
 
 function ScheduleModal({ appId, onClose }: { appId: number; onClose: () => void }) {
@@ -58,8 +62,12 @@ function ScheduleModal({ appId, onClose }: { appId: number; onClose: () => void 
         meeting_link: v.meeting_link || undefined,
         contact_person: v.contact_person || undefined,
         contact_email: v.contact_email || undefined,
+        contact_phone: v.contact_phone || undefined,
         duration_minutes: Number(v.duration_minutes),
+        dress_code: v.dress_code || undefined,
         notes: v.notes || undefined,
+        interview_format_detail: v.interview_format_detail || undefined,
+        rounds: v.rounds ? Number(v.rounds) : undefined,
       });
       qc.invalidateQueries({ queryKey: ["company-applications"] });
       toast({ kind: "success", title: "Final interview scheduled" });
@@ -113,6 +121,20 @@ function ScheduleModal({ appId, onClose }: { appId: number; onClose: () => void 
               <Input id="dur" type="number" {...register("duration_minutes")} />
             </Field>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Contact phone" htmlFor="cph" optional>
+              <Input id="cph" type="tel" placeholder="+20 100 000 0000" {...register("contact_phone")} />
+            </Field>
+            <Field label="Dress code" htmlFor="dc" optional>
+              <Input id="dc" placeholder="Business casual" {...register("dress_code")} />
+            </Field>
+            <Field label="Number of rounds" htmlFor="rounds" optional>
+              <Input id="rounds" type="number" min="1" placeholder="2" {...register("rounds")} />
+            </Field>
+          </div>
+          <Field label="Interview format detail" htmlFor="ifd" optional>
+            <Input id="ifd" placeholder="Panel — 3 interviewers (HR + 2 technical leads)" {...register("interview_format_detail")} />
+          </Field>
           <Field label="Notes" htmlFor="notes" optional>
             <Textarea id="notes" rows={3} placeholder="Bring your portfolio…" {...register("notes")} />
           </Field>

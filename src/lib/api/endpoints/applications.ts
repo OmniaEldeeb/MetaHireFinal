@@ -18,6 +18,8 @@ export interface FinalSchedule {
   contact_phone?: string | null;
   dress_code?: string | null;
   notes?: string | null;
+  interview_format_detail?: string | null;
+  rounds?: number | null;
   confirmed_by_candidate?: boolean;
   confirmed_at?: string | null;
 }
@@ -47,21 +49,51 @@ export const candidateApplicationsApi = {
     api.post<Application>(`/jobs/${jobId}/apply`, body),
   saveJob: (jobId: number) =>
     api.post<{ saved: boolean }>(`/jobs/${jobId}/save`),
-  // Lightweight: fetch saved job IDs only — used to check saved state on job detail page
-  // Much faster than savedJobs() because we only need the ID from each SavedJob record
-  savedJobIds: () =>
-    api.get<unknown>("/candidate/saved-jobs?per_page=100").then((r) => {
+  // Fetch ALL saved job IDs across all pages for accurate saved-state checking.
+  // Fetches page by page until last_page is reached, extracts only IDs.
+  // Results cached in React Query (staleTime 5min) AND in sessionStorage so
+  // page refresh doesn't require re-fetching.
+  savedJobIds: async (): Promise<number[]> => {
+    // Try sessionStorage first for instant load after refresh
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("saved_job_ids");
+      if (cached) {
+        try { return JSON.parse(cached) as number[]; } catch { /* ignore */ }
+      }
+    }
+
+    // Fetch all pages
+    const allIds: number[] = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+      const r = await api.get<unknown>(`/candidate/saved-jobs?per_page=100&page=${page}`);
       const obj = (r ?? {}) as Record<string, unknown>;
-      const savedObj = obj.saved_jobs ?? r;
+      const savedObj = (obj.saved_jobs ?? r) as Record<string, unknown>;
       const rows: unknown[] = Array.isArray(savedObj)
         ? savedObj
         : ((savedObj as { data?: unknown[] })?.data ?? []);
-      return rows.map((item) => {
+
+      for (const item of rows) {
         const it = item as Record<string, unknown>;
-        // Extract job_id from SavedJob record or id from Job record
-        return Number((it.job as Record<string, unknown>)?.id ?? it.job_id ?? it.id ?? 0);
-      }).filter(Boolean) as number[];
-    }),
+        const jobId = Number(
+          (it.job as Record<string, unknown>)?.id ?? it.job_id ?? it.id ?? 0
+        );
+        if (jobId) allIds.push(jobId);
+      }
+
+      lastPage = Number((savedObj as { last_page?: number }).last_page ?? 1);
+      page++;
+    } while (page <= lastPage);
+
+    // Persist to sessionStorage so page refresh is instant
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("saved_job_ids", JSON.stringify(allIds));
+    }
+
+    return allIds;
+  },
 
   savedJobs: () =>
     api.get<unknown>("/candidate/saved-jobs").then((r) => {

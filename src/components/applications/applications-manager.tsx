@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   Loader2,
@@ -30,6 +30,7 @@ import {
 } from "@/lib/constants/labels";
 import type { ApplicationStatus, WorkType, WorkModel } from "@/lib/constants/enums";
 import { cn, imgUrl } from "@/lib/utils";
+import { useToastStore } from "@/stores/toast.store";
 
 function StatusBadge({ status }: { status?: ApplicationStatus }) {
   if (!status) return null;
@@ -52,6 +53,73 @@ function timeAgo(iso?: string) {
   if (d === 1) return "Yesterday";
   if (d < 30) return `${d}d ago`;
   return `${Math.floor(d / 30)}mo ago`;
+}
+
+function ConfirmScheduleButton({
+  appId,
+  schedule,
+}: {
+  appId: number;
+  schedule: import("@/lib/api/endpoints/applications").FinalSchedule;
+}) {
+  const qc = useQueryClient();
+  const toast = useToastStore((s) => s.push);
+  const [confirming, setConfirming] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
+
+  const confirm = async () => {
+    if (!scheduledAt) {
+      toast({ kind: "error", title: "Please select a date and time" });
+      return;
+    }
+    // Validate within window
+    const chosen = new Date(scheduledAt).getTime();
+    const start = new Date(schedule.window_start!).getTime();
+    const end = new Date(schedule.window_end!).getTime();
+    if (chosen < start || chosen > end) {
+      toast({ kind: "error", title: "Time must be within the scheduling window" });
+      return;
+    }
+    setConfirming(true);
+    try {
+      await candidateApplicationsApi.confirmSchedule(appId, scheduledAt);
+      qc.invalidateQueries({ queryKey: ["applications"] });
+      toast({ kind: "success", title: "Final interview confirmed!" });
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      toast({ kind: "error", title: "Confirmation failed", message: e?.message });
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 space-y-2 border-t border-line pt-2">
+      <p className="text-xs font-medium text-faint">
+        Choose your time within the window:
+      </p>
+      <p className="text-xs text-muted">
+        {new Date(schedule.window_start!).toLocaleString()} – {new Date(schedule.window_end!).toLocaleString()}
+      </p>
+      <input
+        type="datetime-local"
+        value={scheduledAt}
+        onChange={(e) => setScheduledAt(e.target.value)}
+        min={schedule.window_start?.slice(0, 16)}
+        max={schedule.window_end?.slice(0, 16)}
+        className="w-full rounded-xl border border-line bg-elevated px-3 py-2 text-sm outline-none focus:border-brand"
+      />
+      <button
+        onClick={confirm}
+        disabled={confirming || !scheduledAt}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-sm font-medium text-white hover:bg-brand-strong disabled:opacity-60"
+      >
+        {confirming
+          ? <><Loader2 className="h-4 w-4 animate-spin" /> Confirming…</>
+          : "Confirm interview time"}
+      </button>
+    </div>
+  );
 }
 
 function DrawerRow({ label, value }: { label: string; value?: string | null }) {
@@ -142,37 +210,72 @@ function ApplicationDrawer({
               return (
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-faint">Final interview</p>
-                  <div className="mt-2 rounded-xl border border-line bg-surface p-3 space-y-1.5 text-sm">
-                    {fs.format && (
-                      <p className="capitalize text-ink font-medium">
-                        {fs.format.replace("_", " ")}
-                      </p>
-                    )}
-                    {fs.scheduled_at && (
+                  <div className="mt-2 rounded-xl border border-line bg-surface p-4 space-y-2.5 text-sm">
+                    {/* Format + status */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      {fs.format && (
+                        <p className="capitalize text-ink font-semibold">{fs.format.replace(/_/g, " ")}</p>
+                      )}
+                      {fs.confirmed_by_candidate ? (
+                        <span className="rounded-full bg-green/12 px-2.5 py-0.5 text-xs text-green font-medium">✓ Confirmed</span>
+                      ) : (
+                        <span className="rounded-full bg-amber/12 px-2.5 py-0.5 text-xs text-amber font-medium">Awaiting confirmation</span>
+                      )}
+                    </div>
+
+                    {/* Scheduled time */}
+                    {fs.scheduled_at ? (
+                      <p className="text-muted">📅 {new Date(fs.scheduled_at).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}</p>
+                    ) : fs.window_start ? (
                       <p className="text-muted">
-                        {new Date(fs.scheduled_at).toLocaleString()}
+                        📅 Window: {new Date(fs.window_start).toLocaleDateString()} – {fs.window_end ? new Date(fs.window_end).toLocaleDateString() : ""}
                       </p>
+                    ) : null}
+
+                    {/* Duration */}
+                    {fs.duration_minutes && (
+                      <p className="text-muted text-xs">⏱ {fs.duration_minutes} minutes</p>
                     )}
-                    {!fs.scheduled_at && fs.window_start && (
-                      <p className="text-muted">
-                        Window: {new Date(fs.window_start).toLocaleDateString()} –{" "}
-                        {fs.window_end ? new Date(fs.window_end).toLocaleDateString() : ""}
-                      </p>
-                    )}
-                    {fs.location && <p className="text-muted">{fs.location}</p>}
+
+                    {/* Location / Meeting link */}
+                    {fs.location && <p className="text-muted">📍 {fs.location}</p>}
                     {fs.meeting_link && (
                       <a href={fs.meeting_link} target="_blank" rel="noopener noreferrer"
-                        className="text-brand hover:underline text-xs">
-                        Join meeting →
-                      </a>
+                        className="block text-brand hover:underline text-xs">🔗 Join meeting →</a>
                     )}
+
+                    {/* Interview details */}
+                    {fs.interview_format_detail && (
+                      <p className="text-muted text-xs">Format: {fs.interview_format_detail}</p>
+                    )}
+                    {fs.rounds && (
+                      <p className="text-muted text-xs">Rounds: {fs.rounds}</p>
+                    )}
+
+                    {/* Dress code */}
+                    {fs.dress_code && (
+                      <p className="text-muted text-xs">👔 Dress code: {fs.dress_code}</p>
+                    )}
+
+                    {/* Contact */}
                     {fs.contact_person && (
                       <p className="text-muted text-xs">Contact: {fs.contact_person}</p>
                     )}
-                    {fs.confirmed_by_candidate ? (
-                      <span className="inline-block rounded-full bg-green/12 px-2 py-0.5 text-xs text-green font-medium">Confirmed</span>
-                    ) : (
-                      <span className="inline-block rounded-full bg-amber/12 px-2 py-0.5 text-xs text-amber font-medium">Awaiting confirmation</span>
+                    {fs.contact_email && (
+                      <a href={`mailto:${fs.contact_email}`} className="text-brand text-xs hover:underline block">{fs.contact_email}</a>
+                    )}
+                    {fs.contact_phone && (
+                      <a href={`tel:${fs.contact_phone}`} className="text-brand text-xs hover:underline block">{fs.contact_phone}</a>
+                    )}
+
+                    {/* Notes */}
+                    {fs.notes && (
+                      <div className="rounded-lg bg-elevated p-2.5 text-xs text-muted">{fs.notes}</div>
+                    )}
+
+                    {/* Confirm button — only if not confirmed yet and there's a window */}
+                    {!fs.confirmed_by_candidate && fs.window_start && (
+                      <ConfirmScheduleButton appId={app.id} schedule={fs} />
                     )}
                   </div>
                 </div>

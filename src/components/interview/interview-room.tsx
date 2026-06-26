@@ -31,23 +31,46 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
-  const speakCurrent = () => {
+  const speakCurrent = (autoRecord = false) => {
     if (!currentQuestion?.question) return;
-    interviewTts.speak({
-      text: currentQuestion.question,
-      lang: language,
-      onStart: () => setSpeaking(true),
-      onEnd: () => setSpeaking(false),
-      onError: () => setSpeaking(false),
-    });
+    const greeting = currentQuestion.greeting;
+
+    const speakQuestion = () => {
+      interviewTts.speak({
+        text: currentQuestion.question,
+        lang: language,
+        onStart: () => setSpeaking(true),
+        onEnd: () => {
+          setSpeaking(false);
+          // Auto-start recording after question is spoken (real interview feel)
+          if (autoRecord && !mutedRef.current) {
+            onStartRecording();
+          }
+        },
+        onError: () => setSpeaking(false),
+      });
+    };
+
+    if (greeting) {
+      // Speak greeting first, then question
+      interviewTts.speak({
+        text: greeting,
+        lang: language,
+        onStart: () => setSpeaking(true),
+        onEnd: speakQuestion,
+        onError: speakQuestion, // if greeting fails, still speak question
+      });
+    } else {
+      speakQuestion();
+    }
   };
 
-  // Auto-read the question while the candidate is reading it (questioning
-  // phase). Re-runs when the question changes. Stops once recording starts.
+  // Auto-read greeting then question when entering questioning phase.
+  // After speaking, auto-start recording so candidate doesn't need to click.
   useEffect(() => {
     if (!interviewTts.supported) return;
     if (isQuestioning && currentQuestion?.question && !mutedRef.current) {
-      speakCurrent();
+      speakCurrent(true); // true = auto-start recording after speech
     } else if (!isQuestioning) {
       interviewTts.cancel();
       setSpeaking(false);
@@ -95,12 +118,14 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
                   />
                 </div>
               </div>
-              <Countdown minutes={currentQuestion.expected_time} running={isRecording} />
+              <Countdown minutes={currentQuestion.expected_time} running={isRecording} onExpire={onSubmit} />
             </div>
-            <p className="mt-5 text-lg font-medium leading-relaxed">{currentQuestion.question}</p>
-            {currentQuestion.question_number === 1 && currentQuestion.greeting ? (
-              <p className="mt-3 text-sm italic text-muted">&ldquo;{currentQuestion.greeting}&rdquo;</p>
+            {currentQuestion.greeting ? (
+              <p className="mt-4 text-sm italic text-muted border-l-2 border-brand/40 pl-3">
+                &ldquo;{currentQuestion.greeting}&rdquo;
+              </p>
             ) : null}
+            <p className="mt-5 text-lg font-medium leading-relaxed">{currentQuestion.question}</p>
 
             {/* TTS controls */}
             {ttsSupported && (
@@ -112,7 +137,7 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
                 <div className="ml-auto flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={speakCurrent}
+                    onClick={() => speakCurrent()}
                     disabled={muted}
                     className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-elevated hover:text-ink disabled:opacity-40"
                   >
@@ -160,11 +185,23 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
             </div>
           ) : isQuestioning ? (
             <div className="flex flex-col items-center gap-3">
-              <Button onClick={handleStartRecording} size="lg">
-                <Mic className="h-4 w-4" />
-                {state.submitError ? "Re-record answer" : "Start recording answer"}
-              </Button>
-              <p className="text-xs text-faint">Read the question above, then record.</p>
+              {speaking ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm text-brand">
+                    <Volume2 className="h-5 w-5 animate-pulse" />
+                    <span>Listening to question…</span>
+                  </div>
+                  <p className="text-xs text-faint">Recording starts automatically when done.</p>
+                </div>
+              ) : (
+                <>
+                  <Button onClick={handleStartRecording} size="lg">
+                    <Mic className="h-4 w-4" />
+                    {state.submitError ? "Re-record answer" : "Start recording answer"}
+                  </Button>
+                  <p className="text-xs text-faint">Or wait — recording starts after the question is spoken.</p>
+                </>
+              )}
             </div>
           ) : null}
         </div>
