@@ -12,7 +12,8 @@ export function SavedPostsPage() {
     queryFn: socialApi.savedPosts,
   });
 
-  const posts = data?.items ?? [];
+  // Filter nulls — backend returns null for deleted posts in saved list
+  const posts = (data?.items ?? []).filter(Boolean);
 
   return (
     <Container className="max-w-2xl py-8">
