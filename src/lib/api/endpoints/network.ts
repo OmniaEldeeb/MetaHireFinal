@@ -58,6 +58,11 @@ export const networkApi = {
     api.get<unknown>("/network")
       .then((r) => extractKey<NetworkConnection>(r, "connections")),
 
+  // GET /users/{id}/connections — public endpoint, shows that user's connections
+  // Response: { user: NetworkUser, connections: { data: [{ id, created_at, user: NetworkUser }], ...paginator } }
+  userConnections: (userId: number, page = 1) =>
+    api.get<unknown>(`/users/${userId}/connections?per_page=20&page=${page}`),
+
   pending: () =>
     api.get<unknown>("/network/pending")
       .then((r) => extractKey<NetworkRequest>(r, "requests")),

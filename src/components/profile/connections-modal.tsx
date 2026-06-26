@@ -1,48 +1,53 @@
 "use client";
 
 /**
- * Connections Modal — shows a user's connections list.
- *
- * Backend has no GET /users/{id}/connections endpoint for OTHER users.
- * For the VIEWER's own connections: GET /network returns them.
- * For a public profile: we show the viewer's OWN connections (standard
- * LinkedIn behavior — you see YOUR connections, not theirs, when you
- * click the count on someone else's profile).
- *
- * If a backend endpoint is added later, swap networkApi.connections() here.
+ * ConnectionsModal
+ * Calls GET /api/users/{userId}/connections — confirmed endpoint.
+ * Response: { data: { connections: { data: [{ id, created_at, user: NetworkUser }] } } }
+ * Shows the PROFILE OWNER's connections, not the viewer's.
  */
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Loader2, Users } from "lucide-react";
+import { X, Loader2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { imgUrl } from "@/lib/utils";
-import { networkApi } from "@/lib/api/endpoints/network";
+import { networkApi, type NetworkUser } from "@/lib/api/endpoints/network";
 import Link from "next/link";
 
-export function ConnectionsModal({ onClose }: { onClose: () => void }) {
+interface ConnectionItem {
+  id: number;
+  created_at?: string;
+  user: NetworkUser;
+  connection_status?: string;
+}
+
+export function ConnectionsModal({
+  userId,
+  onClose,
+}: {
+  userId: number;
+  onClose: () => void;
+}) {
+  const [page, setPage] = useState(1);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["network-connections"],
-    queryFn: networkApi.connections,
+    queryKey: ["user-connections", userId, page],
+    queryFn: () => networkApi.userConnections(userId, page),
     staleTime: 60_000,
   });
 
-  // Each NetworkConnection has requester + recipient.
-  // We need the OTHER person — not the viewer.
-  // Since we don't know viewer id here, just dedupe and show both sides.
-  // In practice networkApi normalizes to the connected user already.
-  const connections = (data ?? []).map((conn) => {
-    // If the API returns a normalized user directly use it
-    const u = (conn as unknown as { user?: typeof conn.requester }).user
-      ?? conn.recipient
-      ?? conn.requester;
-    return {
-      id: u?.id ?? 0,
-      name: u?.name ?? u?.display_name ?? "?",
-      role: u?.role,
-      headline: u?.headline,
-      profile_image_url: u?.profile_image_url ?? u?.display_image,
-      logo_url: u?.logo_url,
-    };
-  }).filter((u) => u.id !== 0);
+  // Unwrap: data.connections.data
+  const raw = (data as Record<string, unknown> | null);
+  const paginator = raw?.connections as {
+    data?: ConnectionItem[];
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+  } | undefined;
+  const items: ConnectionItem[] = paginator?.data ?? [];
+  const currentPage = paginator?.current_page ?? 1;
+  const lastPage = paginator?.last_page ?? 1;
+  const total = paginator?.total ?? 0;
 
   return (
     <div
@@ -57,10 +62,18 @@ export function ConnectionsModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line px-6 py-4 shrink-0">
           <h2 className="font-display text-lg font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-5 w-5 text-brand" /> Connections
+            <Users className="h-5 w-5 text-brand" />
+            Connections
+            {total > 0 && (
+              <span className="ml-1 rounded-full bg-elevated px-2 py-0.5 text-xs font-normal text-muted">
+                {total}
+              </span>
+            )}
           </h2>
-          <button onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:text-ink">
+          <button
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:text-ink"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -71,14 +84,15 @@ export function ConnectionsModal({ onClose }: { onClose: () => void }) {
             <div className="grid place-items-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-brand" />
             </div>
-          ) : connections.length === 0 ? (
+          ) : items.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted">No connections yet.</p>
           ) : (
-            connections.map((conn) => {
-              const href = conn.role === "company"
-                ? `/companies/${conn.id}`
-                : `/users/${conn.id}`;
-              const img = conn.profile_image_url ?? conn.logo_url ?? null;
+            items.map((conn) => {
+              const u = conn.user;
+              const href = u.role === "company"
+                ? `/companies/${u.id}`
+                : `/users/${u.id}`;
+              const img = u.display_image ?? u.profile_image_url ?? u.logo_url ?? null;
               return (
                 <Link
                   key={conn.id}
@@ -90,22 +104,60 @@ export function ConnectionsModal({ onClose }: { onClose: () => void }) {
                     {img
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={imgUrl(img) ?? ""} alt="" className="h-full w-full object-cover" />
-                      : (conn.name ?? "?").charAt(0)}
+                      : (u.name ?? u.display_name ?? "?").charAt(0)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{conn.name}</p>
-                    {conn.headline && (
-                      <p className="text-xs text-muted truncate">{conn.headline}</p>
+                    <p className="text-sm font-semibold truncate">
+                      {u.name ?? u.display_name}
+                    </p>
+                    {u.headline && (
+                      <p className="text-xs text-muted truncate">{u.headline}</p>
                     )}
-                    {conn.role && (
-                      <p className="text-xs text-faint capitalize">{conn.role}</p>
-                    )}
+                    <p className="text-xs text-faint capitalize">{u.role}</p>
                   </div>
+                  {/* connection_status relative to viewer — shown when authenticated */}
+                  {conn.connection_status && conn.connection_status !== "none" && (
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium ${
+                      conn.connection_status === "connected"
+                        ? "bg-green/10 text-green"
+                        : conn.connection_status === "pending_sent"
+                          ? "bg-amber/10 text-amber"
+                          : "bg-elevated text-muted"
+                    }`}>
+                      {conn.connection_status === "connected" ? "Connected"
+                        : conn.connection_status === "pending_sent" ? "Pending"
+                        : conn.connection_status === "following" ? "Following"
+                        : conn.connection_status}
+                    </span>
+                  )}
                 </Link>
               );
             })
           )}
         </div>
+
+        {/* Pagination */}
+        {lastPage > 1 && (
+          <div className="border-t border-line px-6 py-3 shrink-0 flex items-center justify-between">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-xs font-medium disabled:opacity-40 hover:border-brand"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Prev
+            </button>
+            <span className="text-xs text-muted">
+              Page {currentPage} of {lastPage}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+              disabled={currentPage >= lastPage}
+              className="flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-xs font-medium disabled:opacity-40 hover:border-brand"
+            >
+              Next <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -231,7 +231,7 @@ export function PublicCandidate({ id }: { id: number }) {
         )}
       </div>
     </Container>
-    {showConnections && <ConnectionsModal onClose={() => setShowConnections(false)} />}
+    {showConnections && <ConnectionsModal userId={u.id} onClose={() => setShowConnections(false)} />}
     </>
   );
 }
