@@ -27,20 +27,29 @@ export interface Certification {
   date?: string;
 }
 
+export interface LanguageSpoken {
+  language: string;
+  proficiency?: "native" | "fluent" | "intermediate" | "basic";
+}
+
 export interface CandidateProfile {
-  headline?: string;
-  bio?: string;
+  // Confirmed from GET /me/profile response
+  headline?: string | null;
+  bio?: string | null;
+  location?: string | null;
   skills?: string[];
-  location?: string;
-  profile_image_url?: string | null;
   open_to_work?: boolean;
-  linkedin_url?: string;
-  github_url?: string;
-  portfolio_url?: string;
+  profile_image_url?: string | null;
+  linkedin_url?: string | null;
+  github_url?: string | null;
+  portfolio_url?: string | null;
   experience?: Experience[];
   education?: Education[];
   projects?: Project[];
   certifications?: Certification[];
+  languages_spoken?: LanguageSpoken[];   // present in API response
+  resume_visibility?: string | null;     // present in API response
+  availability?: string | null;          // present in API response
 }
 
 export interface ProfileUser {
