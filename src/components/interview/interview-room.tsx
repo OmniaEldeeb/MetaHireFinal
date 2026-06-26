@@ -171,8 +171,14 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
         {/* Controls */}
         <div className="flex items-center justify-center rounded-2xl border border-line bg-surface py-8">
           {isEvaluating ? (
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <Loader2 className="h-5 w-5 animate-spin text-brand" /> Evaluating your answer…
+            <div className="flex flex-col items-center gap-3 text-sm text-muted">
+              <Loader2 className="h-6 w-6 animate-spin text-brand" />
+              <p className="font-medium text-ink">Processing your answer…</p>
+              <div className="flex flex-col items-center gap-1 text-xs text-faint">
+                <p>🎙 Transcribing audio with Whisper AI</p>
+                <p>🤖 Evaluating with Groq — generating next question</p>
+                <p className="mt-1 italic">This takes 5–15 seconds</p>
+              </div>
             </div>
           ) : isRecording ? (
             <div className="flex flex-col items-center gap-3">
