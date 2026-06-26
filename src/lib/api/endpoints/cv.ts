@@ -3,6 +3,52 @@ import type { Paginated } from "../types";
 
 export type CvType = "uploaded" | "built" | "rebuilt";
 
+export interface CvParsedDataExperience {
+  title?: string;
+  company?: string;
+  start_date?: string;
+  end_date?: string | null;
+  description?: string;
+  location?: string;
+}
+
+export interface CvParsedDataEducation {
+  degree?: string;
+  institution?: string;
+  school?: string;
+  start_date?: string;
+  end_date?: string | null;
+  gpa?: string;
+}
+
+export interface CvParsedDataProject {
+  name?: string;
+  description?: string;
+  url?: string;
+  technologies?: string[];
+}
+
+export interface CvParsedDataCertification {
+  name?: string;
+  issuer?: string;
+  date?: string;
+}
+
+export interface CvParsedData {
+  name?: string;
+  title?: string;
+  summary?: string;
+  skills?: string[];
+  experience?: CvParsedDataExperience[];
+  education?: CvParsedDataEducation[];
+  contact?: Record<string, string>;
+  projects?: CvParsedDataProject[];
+  certifications?: CvParsedDataCertification[];
+  languages?: { language?: string; proficiency?: string }[];
+  awards?: string[];
+  location?: string;
+}
+
 export interface Cv {
   id: number;
   user_id?: number;
@@ -13,6 +59,9 @@ export interface Cv {
   language?: string;
   created_at?: string;
   is_favorite?: boolean;
+  parsed_data?: CvParsedData | null;  // full structured data — used for edit pre-fill
+  root_cv_id?: number | null;
+  parent_cv_id?: number | null;
 }
 
 export interface CvTemplate {
@@ -110,10 +159,34 @@ export interface CvReport {
 // Legacy alias kept for backwards compatibility
 export type CvAnalysis = CvReport;
 
+// Confirmed from GET /cv/{id}/compare/{other} response
+export interface CvComparisonSide {
+  mode: "file" | "parsed";
+  file_url?: string | null;
+  content?: Record<string, unknown> | null;
+  note?: string;
+}
+
+export interface CvComparisonDiffField {
+  changed?: boolean;
+  from?: unknown;
+  to?: unknown;
+  added?: string[];
+  removed?: string[];
+  fields?: Record<string, { from?: unknown; to?: unknown }>;
+  from_count?: number;
+  to_count?: number;
+}
+
 export interface CvComparison {
-  cv1?: { id: number; score?: number; strengths?: string[] };
-  cv2?: { id: number; score?: number; strengths?: string[] };
-  summary?: string;
+  versions: {
+    from: { id: number; version?: number; type?: string };
+    to:   { id: number; version?: number; type?: string };
+  };
+  from: CvComparisonSide;
+  to:   CvComparisonSide;
+  diff: Record<string, CvComparisonDiffField>;
+  diff_note?: string | null;
 }
 
 export interface CvHistory {
@@ -135,7 +208,8 @@ export const cvApi = {
       (r) => (Array.isArray(r) ? r : ((r as { data?: CvTemplate[] }).data ?? [])),
     ),
 
-  get: (id: number) => api.get<Cv>(`/cv/${id}`),
+  // GET /cv/{id} → { cv: Cv, display: unknown, latest_analysis: unknown, latest_score: unknown }
+  get: (id: number) => api.get<{ cv: Cv; display?: unknown; latest_analysis?: unknown; latest_score?: unknown }>(`/cv/${id}`),
 
   // GET /cv/{id} — full detail: { cv, display, latest_analysis, latest_score }
   show: (id: number) => api.get<{
@@ -149,18 +223,7 @@ export const cvApi = {
   // Confirmed from CvController: partial edits supported, source CV never mutated
   // Returns 201 with new Cv record (type=user_edited)
   update: (id: number, body: {
-    parsed_data?: {
-      name?: string;
-      title?: string;
-      summary?: string;
-      skills?: string[];
-      experience?: Record<string, unknown>[];
-      education?: Record<string, unknown>[];
-      contact?: Record<string, unknown>;
-      projects?: Record<string, unknown>[];
-      certifications?: Record<string, unknown>[];
-      languages?: Record<string, unknown>[];
-    };
+    parsed_data?: CvParsedData;
     name?: string;
   }) => api.patch<Cv>(`/cv/${id}`, body),
   upload: (file: File, useAi = false) => {

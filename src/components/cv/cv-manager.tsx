@@ -9,6 +9,7 @@ import {
   FileText,
   Trash2,
   Star,
+  GitCompare,
 } from "lucide-react";
 import { Container } from "@/components/ui/section";
 import { CvCardSkeleton } from "@/components/ui/skeleton";
@@ -18,6 +19,7 @@ import { CvCard } from "@/components/cv/cv-card";
 import { UploadCvModal } from "@/components/cv/upload-cv-modal";
 import { BuildCvModal } from "@/components/cv/build-cv-modal";
 import { CvReportModal } from "@/components/cv/cv-report-modal";
+import { CvCompareModal } from "@/components/cv/cv-compare-modal";
 import { cvApi } from "@/lib/api/endpoints/cv";
 import { useToastStore } from "@/stores/toast.store";
 
@@ -35,6 +37,7 @@ export function CvManager() {
   const [showBuild, setShowBuild] = useState(false);
   const [reportCvId, setReportCvId] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [compareIds, setCompareIds] = useState<[number, number] | null>(null);
 
   const cvs = useQuery({ queryKey: ["cvs"], queryFn: cvApi.list });
   const favs = useQuery({
@@ -115,15 +118,29 @@ export function CvManager() {
       {/* Tabs */}
       <div className="mt-6 flex items-center justify-between gap-4">
         <Tabs tabs={TABS} active={tab} onChange={(k) => { setTab(k); setSelected(new Set()); }} />
-        {selected.size > 0 && (
-          <button
-            onClick={bulkDelete}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-coral/40 px-3 py-2 text-sm font-medium text-coral hover:bg-coral/10"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete {selected.size}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {selected.size === 2 && (
+            <button
+              onClick={() => {
+                const [a, b] = [...selected];
+                setCompareIds([a, b]);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-brand/40 px-3 py-2 text-sm font-medium text-brand hover:bg-brand-soft"
+            >
+              <GitCompare className="h-4 w-4" />
+              Compare 2
+            </button>
+          )}
+          {selected.size > 0 && (
+            <button
+              onClick={bulkDelete}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-coral/40 px-3 py-2 text-sm font-medium text-coral hover:bg-coral/10"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete {selected.size}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Grid */}
@@ -177,6 +194,7 @@ export function CvManager() {
                   isFavorite={favoriteIds.has(cv.id)}
                   inTrash={tab === "trash"}
                   onViewReport={setReportCvId}
+                  compareWithId={cv.root_cv_id ?? cv.parent_cv_id ?? null}
                   onRestore={tab === "trash" ? (id) => {
                     qc.invalidateQueries({ queryKey: ["cvs"] });
                     qc.invalidateQueries({ queryKey: ["cv-trash"] });
@@ -192,6 +210,9 @@ export function CvManager() {
       {showBuild && <BuildCvModal onClose={() => setShowBuild(false)} />}
       {reportCvId !== null && (
         <CvReportModal cvId={reportCvId} onClose={() => setReportCvId(null)} />
+      )}
+      {compareIds && (
+        <CvCompareModal fromId={compareIds[0]} toId={compareIds[1]} onClose={() => setCompareIds(null)} />
       )}
     </Container>
   );

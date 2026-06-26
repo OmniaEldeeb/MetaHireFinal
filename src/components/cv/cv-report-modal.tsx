@@ -8,6 +8,7 @@ import {
   Briefcase, User, GraduationCap, FolderGit2, RefreshCw, Info,
 } from "lucide-react";
 import { cvApi } from "@/lib/api/endpoints/cv";
+import { CvCompareModal } from "@/components/cv/cv-compare-modal";
 import { useToastStore } from "@/stores/toast.store";
 import type { CvReport, CvScoreBreakdown } from "@/lib/api/endpoints/cv";
 
@@ -379,6 +380,8 @@ export function CvReportModal({ cvId, onClose }: { cvId: number; onClose: () => 
   const [jobDesc, setJobDesc] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
+  const [rebuiltCvId, setRebuiltCvId] = useState<number | null>(null);
+  const [showCompare, setShowCompare] = useState(false);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["cv-report", cvId, submitted ? jobDesc.trim().slice(0, 30) : ""],
@@ -396,10 +399,11 @@ export function CvReportModal({ cvId, onClose }: { cvId: number; onClose: () => 
   const handleRebuild = async () => {
     setRebuilding(true);
     try {
-      await cvApi.rebuild(cvId);
+      const rebuilt = await cvApi.rebuild(cvId);
       qc.invalidateQueries({ queryKey: ["cvs"] });
+      // Store the new CV id so user can compare original vs rebuilt
+      if (rebuilt?.id) setRebuiltCvId(rebuilt.id);
       toast({ kind: "success", title: "CV rebuilt with AI", message: "Your CV has been updated from your profile data." });
-      onClose();
     } catch (err: unknown) {
       const e = err as { message?: string };
       toast({ kind: "error", title: "Rebuild failed", message: e?.message });
@@ -482,7 +486,18 @@ export function CvReportModal({ cvId, onClose }: { cvId: number; onClose: () => 
                 : <RefreshCw className="h-4 w-4" />}
               Rebuild with AI
             </button>
+            {rebuiltCvId && (
+              <button
+                onClick={() => setShowCompare(true)}
+                className="flex items-center gap-2 rounded-xl border border-brand px-4 py-2 text-sm font-medium text-brand hover:bg-brand-soft"
+              >
+                Compare versions
+              </button>
+            )}
           </div>
+        )}
+        {showCompare && rebuiltCvId && (
+          <CvCompareModal fromId={cvId} toId={rebuiltCvId} onClose={() => setShowCompare(false)} />
         )}
       </div>
     </div>

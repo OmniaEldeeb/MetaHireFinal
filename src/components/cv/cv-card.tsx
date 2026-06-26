@@ -12,10 +12,14 @@ import {
   Trash2,
   BarChart2,
   X,
+  GitCompare,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { cvApi, type Cv } from "@/lib/api/endpoints/cv";
 import { CvBuildModal } from "@/components/cv/cv-build-modal";
+import { CvEditModal } from "@/components/cv/cv-edit-modal";
+import { CvCompareModal } from "@/components/cv/cv-compare-modal";
 import { useToastStore } from "@/stores/toast.store";
 
 function formatDate(iso?: string) {
@@ -38,10 +42,11 @@ interface CvCardProps {
   onViewReport: (id: number) => void;
   onRestore?: (id: number) => void;
   inTrash?: boolean;
-  isFavorite?: boolean; // passed from parent which cross-references favorites list
+  isFavorite?: boolean;
+  compareWithId?: number | null;  // if set, show Compare button that opens CvCompareModal
 }
 
-export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = false }: CvCardProps) {
+export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = false, compareWithId }: CvCardProps) {
   const qc = useQueryClient();
   const toast = useToastStore((s) => s.push);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,6 +54,9 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
   const [nameInput, setNameInput] = useState(cv.name ?? cv.original_filename ?? "");
   const [busy, setBusy] = useState<string | null>(null);
   const [showBuild, setShowBuild] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   // Optimistic local favorite state so star toggles instantly
   const [localFav, setLocalFav] = useState<boolean | null>(null);
   const starred = localFav !== null ? localFav : isFavorite;
@@ -189,21 +197,32 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
           {!inTrash && (
             <div className="relative">
               <button
-                onClick={() => setMenuOpen((v) => !v)}
+                onClick={(e) => {
+                  setMenuRect(e.currentTarget.getBoundingClientRect());
+                  setMenuOpen((v) => !v);
+                }}
                 className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:bg-elevated hover:text-ink"
               >
                 <MoreVertical className="h-4 w-4" />
               </button>
-              {menuOpen && (
+              {menuOpen && menuRect && typeof document !== "undefined" && createPortal(
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-2xl border border-line2 bg-surface shadow-lift">
+                  <div className="fixed inset-0 z-[200]" onClick={() => setMenuOpen(false)} />
+                  <div
+                    className="fixed z-[201] w-48 overflow-hidden rounded-2xl border border-line2 bg-surface shadow-lift"
+                    style={{
+                      top: menuRect.bottom + 4,
+                      right: window.innerWidth - menuRect.right,
+                    }}
+                  >
                     {[
-                      { icon: Download, label: "Export CV", action: () => download() },
-                      { icon: BarChart2, label: "View report", action: () => { setMenuOpen(false); onViewReport(cv.id); } },
-                      { icon: Pencil, label: "Rename", action: () => { setMenuOpen(false); setRenaming(true); } },
-                      { icon: RefreshCw, label: "Rebuild AI", action: doRebuild },
-                      { icon: Trash2, label: "Delete", action: doDelete },
+                      { icon: Pencil,     label: "Edit CV",     action: () => { setMenuOpen(false); setShowEdit(true); } },
+                      { icon: Download,   label: "Export CV",   action: () => download() },
+                      { icon: BarChart2,  label: "View report", action: () => { setMenuOpen(false); onViewReport(cv.id); } },
+                      ...(compareWithId ? [{ icon: GitCompare, label: "Compare versions", action: () => { setMenuOpen(false); setShowCompare(true); } }] : []),
+                      { icon: Pencil,     label: "Rename",      action: () => { setMenuOpen(false); setRenaming(true); } },
+                      { icon: RefreshCw,  label: "Rebuild AI",  action: doRebuild },
+                      { icon: Trash2,     label: "Delete",      action: doDelete },
                     ].map(({ icon: Icon, label, action }) => (
                       <button
                         key={label}
@@ -219,7 +238,8 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
                       </button>
                     ))}
                   </div>
-                </>
+                </>,
+                document.body
               )}
             </div>
           )}
@@ -242,6 +262,8 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
       </div>
     </div>
     {showBuild && <CvBuildModal cvId={cv.id} onClose={() => setShowBuild(false)} />}
+    {showEdit && <CvEditModal cvId={cv.id} onClose={() => setShowEdit(false)} />}
+    {showCompare && compareWithId && <CvCompareModal fromId={compareWithId} toId={cv.id} onClose={() => setShowCompare(false)} />}
   </>
   );
 }
