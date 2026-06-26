@@ -70,7 +70,9 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
   useEffect(() => {
     if (!interviewTts.supported) return;
     if (isQuestioning && currentQuestion?.question && !mutedRef.current) {
-      speakCurrent(true); // true = auto-start recording after speech
+      // Small delay so React has rendered the new question before TTS fires
+      const t = setTimeout(() => speakCurrent(true), 300);
+      return () => clearTimeout(t);
     } else if (!isQuestioning) {
       interviewTts.cancel();
       setSpeaking(false);
@@ -118,7 +120,7 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
                   />
                 </div>
               </div>
-              <Countdown minutes={currentQuestion.expected_time} running={isRecording} onExpire={onSubmit} />
+              <Countdown minutes={currentQuestion.expected_time} running={isRecording} onExpire={isRecording ? onSubmit : undefined} />
             </div>
             {currentQuestion.greeting ? (
               <p className="mt-4 text-sm italic text-muted border-l-2 border-brand/40 pl-3">

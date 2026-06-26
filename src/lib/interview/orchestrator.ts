@@ -263,8 +263,10 @@ export class InterviewOrchestrator {
   }
 
   async submitAnswer(): Promise<boolean> {
-    const { interviewId, currentQuestion } = this.state;
+    const { interviewId, currentQuestion, phase } = this.state;
     if (!interviewId || !currentQuestion) return false;
+    // Guard against double-submit (e.g. manual click + countdown expiry both firing)
+    if (phase === "evaluating" || phase === "finishing") return false;
 
     this.emit({ phase: "evaluating" });
     const audio = await this.recorder.stop();
