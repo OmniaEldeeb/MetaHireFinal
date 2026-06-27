@@ -18,6 +18,38 @@ export interface StartSessionBody {
   interview_id?: number;
 }
 
+/**
+ * The AI-interview backend (POST /interview/start) only accepts four levels:
+ * junior, mid, senior, lead. The app-wide EXPERIENCE_LEVEL list has 12 values
+ * (used for jobs/profiles), so any non-interview level must be mapped down to
+ * one of the four — otherwise the API rejects it with 422 "level is invalid".
+ */
+export type InterviewLevel = "junior" | "mid" | "senior" | "lead";
+
+export function normalizeInterviewLevel(level: string | null | undefined): InterviewLevel {
+  switch ((level ?? "").toLowerCase()) {
+    case "intern":
+    case "entry":
+    case "junior":
+      return "junior";
+    case "mid":
+    case "mid-level":
+      return "mid";
+    case "senior":
+    case "staff":
+    case "principal":
+      return "senior";
+    case "lead":
+    case "manager":
+    case "director":
+    case "vp":
+    case "executive":
+      return "lead";
+    default:
+      return "mid";
+  }
+}
+
 export interface InterviewSession {
   interview_id: number;
   type: string;
@@ -303,7 +335,10 @@ function normalizeReport(raw: unknown): InterviewReport {
 export const interviewApi = {
   // Session
   start: (body: StartSessionBody) =>
-    api.post<InterviewSession>("/interview/start", body),
+    api.post<InterviewSession>("/interview/start", {
+      ...body,
+      level: normalizeInterviewLevel(body.level),
+    }),
   finish: (id: number) =>
     api.post<unknown>(`/interview/${id}/finish`),
   linkTone: (id: number, tone_interview_id: number) =>

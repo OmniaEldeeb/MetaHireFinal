@@ -6,9 +6,12 @@ import { Loader2, Mic, ScanFace, AudioWaveform } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { SkillsInput } from "@/components/profile/skills-input";
-import { EXPERIENCE_LEVEL, LANGUAGE } from "@/lib/constants/enums";
+import { LANGUAGE } from "@/lib/constants/enums";
 import { EXPERIENCE_LEVEL_LABELS } from "@/lib/constants/labels";
 import type { StartSessionBody } from "@/lib/api/endpoints/interview";
+
+// The AI interview backend accepts only these four levels.
+const INTERVIEW_LEVELS = ["junior", "mid", "senior", "lead"] as const;
 
 interface SetupValues {
   target_role: string;
@@ -95,7 +98,7 @@ export function InterviewSetup({
           </Field>
           <Field label="Experience level" htmlFor="level">
             <select id="level" className={selectCls} {...register("level")}>
-              {EXPERIENCE_LEVEL.map((l) => (
+              {INTERVIEW_LEVELS.map((l) => (
                 <option key={l} value={l}>{EXPERIENCE_LEVEL_LABELS[l]}</option>
               ))}
             </select>
