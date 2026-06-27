@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   Mic, MicOff, CheckCircle2, Loader2,
   MessagesSquare, Lightbulb, BookOpen,
-  Volume2, VolumeX, RotateCcw, AlertCircle,
+  Volume2, VolumeX, RotateCcw, AlertCircle, ScanFace,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiveSignals } from "./live-signals";
@@ -120,6 +120,30 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
             <span className="text-xs font-medium text-white">Speaking…</span>
           </div>
         )}
+
+        {/* Candidate camera — self-view, always visible (like a video call).
+            This is the single <video> bound to videoRef; the orchestrator uses
+            it to stream face frames, so it lives here and nowhere else. */}
+        <div className="absolute bottom-4 right-4 aspect-[4/3] w-32 overflow-hidden rounded-xl border border-white/20 bg-bg-3 shadow-lg sm:w-44">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className={`h-full w-full scale-x-[-1] object-cover ${state.webcamGranted ? "" : "invisible"}`}
+          />
+          {!state.webcamGranted && (
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="text-center">
+                <ScanFace className="mx-auto h-6 w-6 text-faint" />
+                <p className="mt-1 text-[0.6rem] text-faint">Camera off</p>
+              </div>
+            </div>
+          )}
+          <span className="absolute left-1.5 top-1.5 rounded bg-black/45 px-1.5 py-0.5 text-[0.55rem] font-medium text-white">
+            You
+          </span>
+        </div>
       </div>
 
       {/* ── Q&A + live signals ─────────────────────────────────────────── */}
@@ -279,8 +303,6 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
           toneEmotion={state.liveToneEmotion}
           faceScore={state.liveFaceScore}
           faceEmotion={state.liveFaceEmotion}
-          webcamRef={videoRef}
-          webcamGranted={state.webcamGranted}
         />
         <div className="mt-3 space-y-1.5 text-[0.65rem] text-faint">
           <p className="flex items-center gap-1.5">

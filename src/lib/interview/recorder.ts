@@ -18,6 +18,11 @@ export class AudioRecorder {
   private stream: MediaStream | null = null;
   private fullChunks: Blob[] = [];
   private mime = "audio/webm";
+  // Monotonic across the WHOLE interview. The tone endpoint enforces a unique
+  // (interview_id, chunk_index); resetting per question would resend index 1,
+  // 2, 3… and collide. So this counter is an instance field and never resets
+  // between start() calls — only releaseMic() (end of interview) clears it.
+  private chunkIndex = 1;
 
   async requestMic(): Promise<void> {
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -41,7 +46,6 @@ export class AudioRecorder {
   start(onChunk?: (blob: Blob, index: number) => void, chunkMs = 3000) {
     if (!this.stream) throw new Error("No microphone stream");
     this.fullChunks = [];
-    let chunkIndex = 1;
 
     this.mime = this.pickMime();
     this.mediaRecorder = new MediaRecorder(this.stream, { mimeType: this.mime });
@@ -50,8 +54,9 @@ export class AudioRecorder {
       if (e.data.size > 0) {
         // Keep every slice for the full answer …
         this.fullChunks.push(e.data);
-        // … and forward this slice to the live tone stream.
-        onChunk?.(e.data, chunkIndex++);
+        // … and forward this slice to the live tone stream with a chunk index
+        // that keeps incrementing across questions (never resets to 1).
+        onChunk?.(e.data, this.chunkIndex++);
       }
     };
 
@@ -87,6 +92,7 @@ export class AudioRecorder {
     this.stream = null;
     this.mediaRecorder = null;
     this.fullChunks = [];
+    this.chunkIndex = 1; // fresh interview → start indices over
   }
 
   get isRecording() {
