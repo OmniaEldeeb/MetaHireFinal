@@ -1,27 +1,42 @@
 /**
- * Audio recorder — wraps MediaRecorder, provides start/stop plus optional
- * periodic chunk streaming (used for live tone analysis). Works in Chrome and
- * Firefox (WebM/Ogg).
+ * Audio recorder — wraps MediaRecorder for the interview.
  *
- * Design notes:
- *  • We use the *timeslice* form `MediaRecorder.start(chunkMs)`. The browser
- *    then emits `dataavailable` slices that are guaranteed to concatenate into
- *    a single valid recording — unlike manually-spaced `requestData()` calls,
- *    which on some setups yield a file the server cannot decode ("could not
- *    transcribe audio").
- *  • `fullChunks` collects *every* slice so `stop()` returns the complete
- *    answer for transcription. Each slice is also forwarded to `onChunk` for
- *    the tone endpoint.
+ * It serves two consumers that need DIFFERENT shapes of audio, so it runs
+ * TWO MediaRecorders on the same mic stream:
+ *
+ *  1. Answer recorder (continuous, no timeslice)
+ *     Records the whole answer as ONE complete WebM (with a header) and
+ *     returns it from stop(). This is what gets transcribed by Whisper.
+ *
+ *  2. Chunk recorder (short start/stop cycle, every `chunkMs`)
+ *     Produces a fresh, *standalone* WebM clip every few seconds — each clip
+ *     has its own header, so the tone service can decode every one of them.
+ *
+ * Why two recorders? A single MediaRecorder in *timeslice* mode only puts the
+ * WebM header in the FIRST slice; every later slice is a headerless fragment
+ * that ffmpeg/PyAV rejects ("Invalid data found when processing input"). That
+ * made all tone chunks after the first fail to decode (tone score = 0).
+ * Recording each chunk as its own complete clip fixes that, while the separate
+ * continuous recorder keeps the full answer valid for transcription.
  */
 export class AudioRecorder {
-  private mediaRecorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
-  private fullChunks: Blob[] = [];
   private mime = "audio/webm";
+
+  // 1) Continuous recorder → the full answer (sent to Whisper).
+  private answerRecorder: MediaRecorder | null = null;
+  private answerChunks: Blob[] = [];
+
+  // 2) Cycling recorder → standalone clips for live tone analysis.
+  private chunkRecorder: MediaRecorder | null = null;
+  private chunkTimer: ReturnType<typeof setTimeout> | null = null;
+  private onChunk?: (blob: Blob, index: number) => void;
+  private chunkMs = 3000;
+  private chunkActive = false;
+
   // Monotonic across the WHOLE interview. The tone endpoint enforces a unique
   // (interview_id, chunk_index); resetting per question would resend index 1,
-  // 2, 3… and collide. So this counter is an instance field and never resets
-  // between start() calls — only releaseMic() (end of interview) clears it.
+  // 2, 3… and collide. Only releaseMic() (end of interview) clears it.
   private chunkIndex = 1;
 
   async requestMic(): Promise<void> {
@@ -43,60 +58,121 @@ export class AudioRecorder {
     return "audio/webm";
   }
 
+  /**
+   * Begin recording. If `onChunk` is supplied, standalone audio clips are
+   * streamed to it every `chunkMs` (for live tone analysis) while the full
+   * answer is captured in parallel.
+   */
   start(onChunk?: (blob: Blob, index: number) => void, chunkMs = 3000) {
     if (!this.stream) throw new Error("No microphone stream");
-    this.fullChunks = [];
 
     this.mime = this.pickMime();
-    this.mediaRecorder = new MediaRecorder(this.stream, { mimeType: this.mime });
+    this.onChunk = onChunk;
+    this.chunkMs = chunkMs;
 
-    this.mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        // Keep every slice for the full answer …
-        this.fullChunks.push(e.data);
-        // … and forward this slice to the live tone stream with a chunk index
-        // that keeps incrementing across questions (never resets to 1).
-        onChunk?.(e.data, this.chunkIndex++);
+    // 1) Continuous answer recorder — one clean, header-complete WebM.
+    this.answerChunks = [];
+    this.answerRecorder = new MediaRecorder(this.stream, { mimeType: this.mime });
+    this.answerRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) this.answerChunks.push(e.data);
+    };
+    this.answerRecorder.start(); // no timeslice → single continuous recording
+
+    // 2) Chunk recorder cycle — each clip is a complete, decodable WebM.
+    if (onChunk) {
+      this.chunkActive = true;
+      this.startChunkCycle();
+    }
+  }
+
+  /** Record one self-contained ~chunkMs clip, emit it, then start the next. */
+  private startChunkCycle() {
+    if (!this.chunkActive || !this.stream) return;
+
+    const rec = new MediaRecorder(this.stream, { mimeType: this.mime });
+    const parts: Blob[] = [];
+
+    rec.ondataavailable = (e) => {
+      if (e.data.size > 0) parts.push(e.data);
+    };
+    rec.onstop = () => {
+      if (parts.length) {
+        // Complete WebM (its own header) → tone service decodes it cleanly.
+        const clip = new Blob(parts, { type: this.mime });
+        this.onChunk?.(clip, this.chunkIndex++);
       }
+      // Immediately roll into the next clip while still recording.
+      if (this.chunkActive) this.startChunkCycle();
     };
 
-    // Timeslice only when we need periodic chunks; otherwise capture one blob.
-    if (onChunk) this.mediaRecorder.start(chunkMs);
-    else this.mediaRecorder.start();
+    this.chunkRecorder = rec;
+    rec.start();
+
+    this.chunkTimer = setTimeout(() => {
+      if (rec.state !== "inactive") rec.stop();
+    }, this.chunkMs);
   }
 
   /** Stops recording and resolves with the complete answer audio. */
   stop(): Promise<Blob> {
-    return new Promise((resolve) => {
-      if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") {
-        return resolve(new Blob(this.fullChunks, { type: this.mime }));
+    // End the chunk cycle (the final clip is flushed by its own onstop).
+    this.chunkActive = false;
+    if (this.chunkTimer) {
+      clearTimeout(this.chunkTimer);
+      this.chunkTimer = null;
+    }
+    try {
+      if (this.chunkRecorder && this.chunkRecorder.state !== "inactive") {
+        this.chunkRecorder.stop();
       }
-      this.mediaRecorder.onstop = () => {
-        // stop() flushes a final dataavailable before this fires, so fullChunks
-        // already contains the tail — the whole answer is captured.
-        resolve(new Blob(this.fullChunks, { type: this.mime }));
-      };
-      this.mediaRecorder.stop();
+    } catch {
+      /* ignore */
+    }
+    this.chunkRecorder = null;
+
+    // Resolve with the full continuous answer recording.
+    return new Promise((resolve) => {
+      const finish = () =>
+        resolve(new Blob(this.answerChunks, { type: this.mime }));
+
+      if (!this.answerRecorder || this.answerRecorder.state === "inactive") {
+        return finish();
+      }
+      this.answerRecorder.onstop = finish;
+      this.answerRecorder.stop(); // flushes a final dataavailable, then onstop
     });
   }
 
   releaseMic() {
+    this.chunkActive = false;
+    if (this.chunkTimer) {
+      clearTimeout(this.chunkTimer);
+      this.chunkTimer = null;
+    }
     try {
-      if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
-        this.mediaRecorder.stop();
+      if (this.chunkRecorder && this.chunkRecorder.state !== "inactive") {
+        this.chunkRecorder.stop();
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (this.answerRecorder && this.answerRecorder.state !== "inactive") {
+        this.answerRecorder.stop();
       }
     } catch {
       /* ignore */
     }
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
-    this.mediaRecorder = null;
-    this.fullChunks = [];
+    this.answerRecorder = null;
+    this.chunkRecorder = null;
+    this.answerChunks = [];
     this.chunkIndex = 1; // fresh interview → start indices over
   }
 
   get isRecording() {
-    return this.mediaRecorder?.state === "recording";
+    return this.answerRecorder?.state === "recording";
   }
 
   get mimeType() {
