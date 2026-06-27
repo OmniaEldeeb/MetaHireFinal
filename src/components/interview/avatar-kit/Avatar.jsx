@@ -34,6 +34,21 @@ const talkingAnimations = ["Sitting Talking", "Having A Meeting"];
 const VISEME_NAMES = ["viseme_O", "viseme_aa", "viseme_E", "viseme_I"];
 
 /**
+ * Mixamo clips carry a root "Armature" track for whole-body root motion.
+ * The Ready Player Me skeleton doesn't expose that node to the mixer, so
+ * three.js logs a harmless "PropertyBinding: ... Armature.quaternion ...
+ * wasn't found" warning. We don't need root motion for a seated avatar, so we
+ * drop those tracks up front — the body still animates via the real bones and
+ * the console stays clean. Idempotent: safe to call repeatedly on a cached clip.
+ */
+function stripRootTracks(clip) {
+  if (clip?.tracks) {
+    clip.tracks = clip.tracks.filter((t) => !t.name.startsWith("Armature."));
+  }
+  return clip;
+}
+
+/**
  * @param {object} props
  * @param {object} props.visemes  - من useAudioLipSync.currentVisemes
  * @param {boolean} props.isPlaying - من useAudioLipSync.isPlaying
@@ -57,15 +72,19 @@ export function Avatar({
   // تحميل الأنيميشنز
   const { animations: idleAnim } = useFBX(animationFiles["Sitting Idle"]);
   idleAnim[0].name = "Sitting Idle";
+  stripRootTracks(idleAnim[0]);
 
   const { animations: talkAnim1 } = useFBX(animationFiles["Sitting Talking"]);
   talkAnim1[0].name = "Sitting Talking";
+  stripRootTracks(talkAnim1[0]);
 
   const { animations: meetAnim } = useFBX(animationFiles["Having A Meeting"]);
   meetAnim[0].name = "Having A Meeting";
+  stripRootTracks(meetAnim[0]);
 
   const { animations: idleStandAnim } = useFBX(animationFiles["Idle"]);
   idleStandAnim[0].name = "Idle";
+  stripRootTracks(idleStandAnim[0]);
 
   const { actions } = useAnimations(
     [idleAnim[0], talkAnim1[0], meetAnim[0], idleStandAnim[0]],
