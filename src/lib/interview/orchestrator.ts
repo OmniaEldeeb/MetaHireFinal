@@ -92,6 +92,10 @@ export class InterviewOrchestrator {
   private recorder = new AudioRecorder();
   private webcam = new WebcamCapture();
   private webcamStarting = false;
+  // Timestamp of the last face frame sent during the "evaluating" phase.
+  // Used to throttle face uploads to ~20s while an answer is being uploaded +
+  // transcribed, so they don't compete with the answer request on the tunnel.
+  private lastFaceEvalSend = 0;
   /** Echo instance for the interview.{id} private channel. Null when not subscribed. */
   private echoRef: EchoLike | null = null;
 
@@ -227,6 +231,14 @@ export class InterviewOrchestrator {
       videoEl,
       (blob, idx) => {
         if (this.state.faceId) {
+          // While an answer is being submitted (uploading + Whisper running),
+          // throttle face frames to ~20s so they don't compete with the
+          // answer upload on the tunnel. Before/while answering it stays 5s.
+          if (this.state.phase === "evaluating") {
+            const now = Date.now();
+            if (now - this.lastFaceEvalSend < 20000) return; // skip this tick
+            this.lastFaceEvalSend = now;
+          }
           // idx is the frame index from WebcamCapture's own counter (1-based).
           interviewApi
             .faceChunk(this.state.faceId, blob, idx)
