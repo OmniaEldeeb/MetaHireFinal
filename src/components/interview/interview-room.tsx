@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiveSignals } from "./live-signals";
+import { InterviewAvatar } from "./interview-avatar";
 import { Countdown } from "./countdown";
 import { interviewTts } from "@/lib/interview/tts";
 import type { OrchestratorState } from "@/lib/interview/orchestrator";
@@ -103,9 +104,28 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
   const ttsSupported = interviewTts.supported;
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-5 px-5 py-6 lg:grid-cols-[1fr_280px]">
-      {/* Left */}
-      <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-5 px-5 py-6">
+      {/* ── AI interviewer stage ───────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-line bg-surface">
+        <div className="h-[clamp(260px,42vh,420px)] w-full">
+          <InterviewAvatar speaking={speaking} />
+        </div>
+        <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5 backdrop-blur-sm">
+          <span className="h-2 w-2 rounded-full bg-brand" />
+          <span className="text-xs font-medium text-white">AI Interviewer</span>
+        </div>
+        {speaking && (
+          <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-brand/90 px-3 py-1.5 backdrop-blur-sm">
+            <Volume2 className="h-3.5 w-3.5 text-white" />
+            <span className="text-xs font-medium text-white">Speaking…</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Q&A + live signals ─────────────────────────────────────────── */}
+      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+        {/* Left */}
+        <div className="space-y-4">
         {currentQuestion && (
           <div className="rounded-2xl border border-line bg-surface p-6">
             <div className="flex items-center justify-between">
@@ -272,6 +292,7 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
               <MicOff className="h-3 w-3" /> Camera not detected — scoring still active
             </p>
           )}
+        </div>
         </div>
       </div>
     </div>
