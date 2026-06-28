@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { imgUrl } from "@/lib/utils";
+import { SmartImage, SmartVideo } from "@/components/social/smart-media";
 import { Globe, Users, Lock, Briefcase, MapPin, ExternalLink } from "lucide-react";
 import type { Post } from "@/lib/api/endpoints/social";
 import { PostSharesModal } from "@/components/social/post-shares-modal";
@@ -83,10 +84,9 @@ export function ProfilePostCard({ post }: { post: Post }) {
               const resolved = imgUrl(url) ?? "";
               const isVideo = /\.(mp4|webm)(\?|$)/i.test(url);
               return isVideo ? (
-                <video key={i} src={resolved} className="rounded-xl w-full max-h-40 object-cover bg-black" />
+                <SmartVideo key={i} src={resolved} controls={false} className="rounded-xl w-full max-h-40 object-cover bg-black" />
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={resolved} alt="" className="rounded-xl w-full max-h-40 object-cover" />
+                <SmartImage key={i} src={resolved} alt="" className="rounded-xl w-full max-h-40 object-cover" />
               );
             })}
           </div>

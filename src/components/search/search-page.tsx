@@ -288,10 +288,11 @@ function SearchInner() {
 
             <ResultSection title="Posts" icon={Newspaper} count={posts.length}>
               {posts.map((post) => (
-                <div key={post.id} className="rounded-2xl border border-line bg-surface p-4">
+                <Link key={post.id} href={`/posts/${post.id}`}
+                  className="block rounded-2xl border border-line bg-surface p-4 transition-all hover:-translate-y-0.5 hover:shadow-soft">
                   <p className="text-xs font-semibold text-muted">{post.author?.name}</p>
                   <p className="mt-1 line-clamp-3 text-sm text-ink">{post.content}</p>
-                </div>
+                </Link>
               ))}
             </ResultSection>
           </div>

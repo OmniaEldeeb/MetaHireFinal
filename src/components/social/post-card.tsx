@@ -1,6 +1,7 @@
 "use client";
 
 import { imgUrl } from "@/lib/utils";
+import { SmartImage, SmartVideo } from "@/components/social/smart-media";
 import Link from "next/link";
 import React, { useState, useRef } from "react";
 import { useIntersectionObserver } from "@/lib/hooks/use-intersection";
@@ -422,15 +423,14 @@ export function PostCard({ post, onView, collapsible = false }: { post: Post; on
             const resolved = imgUrl(url) ?? "";
             const isVideo = /\.(mp4|webm)(\?|$)/i.test(url);
             return isVideo ? (
-              <video
+              <SmartVideo
                 key={i}
                 src={resolved}
                 controls
                 className="rounded-xl w-full max-h-80 bg-black"
               />
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={resolved} alt="" className="rounded-xl object-cover w-full max-h-80" />
+              <SmartImage key={i} src={resolved} alt="" className="rounded-xl object-cover w-full max-h-80" />
             );
           })}
         </div>
