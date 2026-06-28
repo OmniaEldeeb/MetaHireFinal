@@ -1,10 +1,12 @@
 "use client";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { Loader2, Pencil, Users, ToggleRight, ToggleLeft } from "lucide-react";
+import { Loader2, Pencil, Users, ToggleRight, ToggleLeft, Megaphone } from "lucide-react";
 import { Container } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { companyJobsApi } from "@/lib/api/endpoints/company-jobs";
+import { AnnounceJobModal } from "@/components/company/announce-job-modal";
 import { useToastStore } from "@/stores/toast.store";
 import type { Job } from "@/lib/api/endpoints/jobs";
 
@@ -12,6 +14,7 @@ export default function CompanyJobDetailPage({ params }: { params: { id: string 
   const id = Number(params.id);
   const qc = useQueryClient();
   const toast = useToastStore((s) => s.push);
+  const [announce, setAnnounce] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ["company-job", id], queryFn: () => companyJobsApi.getJob(id) });
   const job = data ? (("id" in (data as object)) ? data as Job : (data as { job?: Job }).job) : null;
 
@@ -36,7 +39,8 @@ export default function CompanyJobDetailPage({ params }: { params: { id: string 
             {job.is_active ? "Active" : "Paused"}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setAnnounce(true)}><Megaphone className="h-4 w-4" />Share to feed</Button>
           <Button variant="outline" size="sm" href={`/company/jobs/${id}/applicants`}><Users className="h-4 w-4" />Applicants</Button>
           <Button variant="outline" size="sm" href={`/company/jobs/${id}/edit`}><Pencil className="h-4 w-4" />Edit</Button>
           <Button variant="outline" size="sm" onClick={toggle}>
@@ -45,6 +49,10 @@ export default function CompanyJobDetailPage({ params }: { params: { id: string 
           </Button>
         </div>
       </div>
+
+      {announce && (
+        <AnnounceJobModal jobId={id} jobTitle={job.title} onClose={() => setAnnounce(false)} />
+      )}
       {job.description && <div className="mt-6 rounded-2xl border border-line bg-surface p-6"><p className="whitespace-pre-line text-sm leading-relaxed text-muted">{job.description}</p></div>}
       {job.requirements?.length ? (
         <div className="mt-4 rounded-2xl border border-line bg-surface p-6">

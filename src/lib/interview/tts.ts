@@ -46,17 +46,39 @@ class InterviewTts {
     return this.synth !== null;
   }
 
-  /** Resolve the best available voice for a BCP-47 language tag. */
+  /** Resolve the best available voice for a BCP-47 language tag.
+   *  Always biases toward a MALE voice (the interviewer is male). Browser
+   *  voices don't expose gender, so we match on well-known male/female name
+   *  hints and, failing that, avoid obviously-female voices. */
   private pickVoice(bcp47: string): SpeechSynthesisVoice | undefined {
     if (!this.synth) return undefined;
     const voices = this.synth.getVoices();
     if (!voices.length) return undefined;
     const base = bcp47.split("-")[0].toLowerCase();
-    // Prefer an exact tag match, then a same-language match, else default.
+
+    const exact = voices.filter((v) => v.lang?.toLowerCase() === bcp47.toLowerCase());
+    const sameLang = voices.filter((v) => v.lang?.toLowerCase().startsWith(base));
+    const pool = exact.length ? exact : sameLang;
+    if (!pool.length) return undefined;
+
+    const MALE_HINTS = [
+      "male", "david", "mark", "daniel", "fred", "alex", "george", "james",
+      "guy", "william", "thomas", "diego", "jorge", "ravi", "rishi", "aaron",
+      "maged", "majed", "tarik", "naayf", "hamza", "google uk english male",
+    ];
+    const FEMALE_HINTS = [
+      "female", "samantha", "victoria", "zira", "susan", "karen", "tessa",
+      "fiona", "hazel", "moira", "veena", "amira", "laila", "salma", "hoda",
+      "google us english", "google uk english female",
+    ];
+    const isMale = (n: string) => MALE_HINTS.some((h) => n.includes(h));
+    const isFemale = (n: string) => FEMALE_HINTS.some((h) => n.includes(h));
+
+    // 1) explicitly male  2) anything not obviously female  3) first available
     return (
-      voices.find((v) => v.lang?.toLowerCase() === bcp47.toLowerCase()) ??
-      voices.find((v) => v.lang?.toLowerCase().startsWith(base)) ??
-      undefined
+      pool.find((v) => { const n = v.name.toLowerCase(); return isMale(n) && !n.includes("female"); }) ??
+      pool.find((v) => !isFemale(v.name.toLowerCase())) ??
+      pool[0]
     );
   }
 

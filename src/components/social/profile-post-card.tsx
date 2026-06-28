@@ -7,8 +7,9 @@
  * The shares stat opens the "who shared" modal in place.
  */
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { imgUrl } from "@/lib/utils";
-import { Globe, Users, Lock } from "lucide-react";
+import { Globe, Users, Lock, Briefcase, MapPin, ExternalLink } from "lucide-react";
 import type { Post } from "@/lib/api/endpoints/social";
 import { PostSharesModal } from "@/components/social/post-shares-modal";
 
@@ -24,6 +25,7 @@ function timeAgo(iso?: string) {
 const VISIBILITY_ICONS = { public: Globe, connections: Users, private: Lock };
 
 export function ProfilePostCard({ post }: { post: Post }) {
+  const router = useRouter();
   const [showShares, setShowShares] = useState(false);
   const VisIcon = VISIBILITY_ICONS[(post.visibility as keyof typeof VISIBILITY_ICONS) ?? "public"] ?? Globe;
   const authorName = post.author?.display_name ?? post.author?.name ?? "?";
@@ -87,6 +89,42 @@ export function ProfilePostCard({ post }: { post: Post }) {
                 <img key={i} src={resolved} alt="" className="rounded-xl w-full max-h-40 object-cover" />
               );
             })}
+          </div>
+        )}
+
+        {/* Shared job posting — type=job_share */}
+        {post.shared_job && (
+          <div
+            role="link"
+            tabIndex={0}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/jobs/${post.shared_job!.id}`); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); router.push(`/jobs/${post.shared_job!.id}`); } }}
+            className="mt-3 block cursor-pointer overflow-hidden rounded-xl border border-line bg-elevated transition-colors hover:border-brand"
+          >
+            <div className="flex items-center gap-2.5 border-b border-line px-4 pb-2 pt-3">
+              <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-surface">
+                {post.shared_job.company?.logo_url || post.shared_job.company?.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imgUrl(post.shared_job.company.logo_url ?? post.shared_job.company.logo) ?? ""} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <Briefcase className="h-4 w-4 text-faint" />
+                )}
+              </span>
+              <p className="min-w-0 flex-1 truncate text-xs font-semibold">{post.shared_job.company?.name}</p>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-faint" />
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-sm font-bold text-ink">{post.shared_job.title}</p>
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                {post.shared_job.location && (
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-faint" />{post.shared_job.location}</span>
+                )}
+                {post.shared_job.work_model && <span className="capitalize">{post.shared_job.work_model.replace(/_/g, " ")}</span>}
+                {post.shared_job.work_type && <span className="capitalize">{post.shared_job.work_type.replace(/_/g, " ")}</span>}
+                {post.shared_job.salary_range && <span className="font-medium text-brand">{post.shared_job.salary_range}</span>}
+              </div>
+              <p className="mt-2.5 text-xs font-medium text-brand">View job →</p>
+            </div>
           </div>
         )}
       </a>
