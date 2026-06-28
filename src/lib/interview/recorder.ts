@@ -71,8 +71,14 @@ export class AudioRecorder {
     this.chunkMs = chunkMs;
 
     // 1) Continuous answer recorder — one clean, header-complete WebM.
+    //    32 kbps Opus mono is plenty for speech and keeps the upload small
+    //    (~300-400 KB/answer instead of ~2.4 MB), which is much kinder to the
+    //    tunnel. Format is unchanged, so Whisper/tone/validation are unaffected.
     this.answerChunks = [];
-    this.answerRecorder = new MediaRecorder(this.stream, { mimeType: this.mime });
+    this.answerRecorder = new MediaRecorder(this.stream, {
+      mimeType: this.mime,
+      audioBitsPerSecond: 32000,
+    });
     this.answerRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) this.answerChunks.push(e.data);
     };
@@ -89,7 +95,10 @@ export class AudioRecorder {
   private startChunkCycle() {
     if (!this.chunkActive || !this.stream) return;
 
-    const rec = new MediaRecorder(this.stream, { mimeType: this.mime });
+    const rec = new MediaRecorder(this.stream, {
+      mimeType: this.mime,
+      audioBitsPerSecond: 32000,
+    });
     const parts: Blob[] = [];
 
     rec.ondataavailable = (e) => {

@@ -1,7 +1,7 @@
 import { api } from "../client";
 import type { Paginated } from "../types";
 
-export type CvType = "uploaded" | "built" | "rebuilt";
+export type CvType = "original" | "uploaded" | "built" | "rebuilt";
 
 export interface CvParsedDataExperience {
   title?: string;
@@ -56,6 +56,7 @@ export interface Cv {
   type?: CvType;
   name?: string;
   original_filename?: string;
+  cv_url?: string;  // public URL of the uploaded file (CvResource: file_url). Uploaded CVs only.
   language?: string;
   created_at?: string;
   is_favorite?: boolean;

@@ -8,6 +8,7 @@ import {
   Star,
   MoreVertical,
   Download,
+  Eye,
   Pencil,
   RefreshCw,
   Trash2,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { cvApi, type Cv } from "@/lib/api/endpoints/cv";
 import { CvBuildModal } from "@/components/cv/cv-build-modal";
 import { CvEditModal } from "@/components/cv/cv-edit-modal";
+import { CvPreviewModal } from "@/components/cv/cv-preview-modal";
 import { useToastStore } from "@/stores/toast.store";
 
 function formatDate(iso?: string) {
@@ -32,6 +34,7 @@ function formatDate(iso?: string) {
 }
 
 const TYPE_LABELS: Record<string, string> = {
+  original: "Uploaded",
   uploaded: "Uploaded",
   built: "AI built",
   rebuilt: "AI rebuilt",
@@ -56,6 +59,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
   const [busy, setBusy] = useState<string | null>(null);
   const [showBuild, setShowBuild] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   // Optimistic local favorite state so star toggles instantly
   const [localFav, setLocalFav] = useState<boolean | null>(null);
@@ -216,6 +220,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
                     }}
                   >
                     {[
+                      { icon: Eye,        label: "Preview",     action: () => { setMenuOpen(false); setShowPreview(true); } },
                       { icon: Pencil,     label: "Edit CV",     action: () => { setMenuOpen(false); setShowEdit(true); } },
                       { icon: Download,   label: "Export CV",   action: () => download() },
                       { icon: BarChart2,  label: "View report", action: () => { setMenuOpen(false); onViewReport(cv.id); } },
@@ -263,6 +268,7 @@ export function CvCard({ cv, onViewReport, onRestore, inTrash, isFavorite = fals
     </div>
     {showBuild && <CvBuildModal cvId={cv.id} onClose={() => setShowBuild(false)} />}
     {showEdit && <CvEditModal cvId={cv.id} onClose={() => setShowEdit(false)} />}
+    {showPreview && <CvPreviewModal cv={cv} onClose={() => setShowPreview(false)} />}
   </>
   );
 }
