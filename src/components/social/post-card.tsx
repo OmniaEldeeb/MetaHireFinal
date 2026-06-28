@@ -53,7 +53,7 @@ function authorName(author: Post["author"]): string {
   return author.name ?? author.display_name ?? "?";
 }
 
-export function PostCard({ post, onView }: { post: Post; onView?: (id: number) => void }) {
+export function PostCard({ post, onView, collapsible = false }: { post: Post; onView?: (id: number) => void; collapsible?: boolean }) {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const toast = useToastStore((s) => s.push);
@@ -277,7 +277,7 @@ export function PostCard({ post, onView }: { post: Post; onView?: (id: number) =
         </div>
       ) : post.content ? (
         <div className="mt-4">
-          <PostContent content={post.content} contentFormat={post.content_format} />
+          <PostContent content={post.content} contentFormat={post.content_format} collapsible={collapsible} />
         </div>
       ) : null}
 

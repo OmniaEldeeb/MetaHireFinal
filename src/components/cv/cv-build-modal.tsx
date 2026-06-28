@@ -16,6 +16,7 @@
  */
 
 import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   X, Loader2, Download, Eye, Globe, FileText, Camera, Check,
 } from "lucide-react";
@@ -48,6 +49,23 @@ export function CvBuildModal({ cvId, onClose }: { cvId: number; onClose: () => v
 
   const [format, setFormat] = useState<"html" | "pdf" | "docx">("html");
   const [template, setTemplate] = useState("ats");
+
+  // Prefer the API template list (name + description + best_for). The hardcoded
+  // TEMPLATES act as a fallback while loading / if the request fails.
+  const templatesQ = useQuery({
+    queryKey: ["cv-templates"],
+    queryFn: cvApi.templates,
+    staleTime: 5 * 60 * 1000,
+  });
+  const templateList: { id: string; label: string; desc: string; best_for: string[] }[] =
+    templatesQ.data?.length
+      ? templatesQ.data.map((t) => ({
+          id: t.id,
+          label: t.name,
+          desc: t.description ?? "",
+          best_for: t.best_for ?? [],
+        }))
+      : TEMPLATES.map((t) => ({ ...t, best_for: [] as string[] }));
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -153,7 +171,7 @@ export function CvBuildModal({ cvId, onClose }: { cvId: number; onClose: () => v
             <div>
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-faint">Template</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {TEMPLATES.map(({ id, label, desc }) => (
+                {templateList.map(({ id, label, desc, best_for }) => (
                   <button
                     key={id}
                     onClick={() => { setTemplate(id); setHtmlPreview(null); }}
@@ -167,7 +185,16 @@ export function CvBuildModal({ cvId, onClose }: { cvId: number; onClose: () => v
                       <p className={`text-sm font-semibold ${template === id ? "text-brand" : "text-ink"}`}>{label}</p>
                       {template === id && <Check className="h-3.5 w-3.5 text-brand" />}
                     </div>
-                    <p className="text-[0.65rem] text-muted mt-0.5">{desc}</p>
+                    {desc && <p className="text-[0.65rem] text-muted mt-0.5 leading-snug">{desc}</p>}
+                    {best_for.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {best_for.slice(0, 3).map((b) => (
+                          <span key={b} className="rounded-full bg-elevated px-1.5 py-0.5 text-[0.55rem] font-medium text-faint">
+                            {b}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {PHOTO_TEMPLATES.has(id) && (
                       <span className="mt-1 inline-block rounded-full bg-amber/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-amber">
                         Photo

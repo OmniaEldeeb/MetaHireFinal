@@ -68,6 +68,8 @@ export interface Cv {
 export interface CvTemplate {
   id: string;
   name: string;
+  description?: string;
+  best_for?: string[];
   preview_url?: string;
 }
 
@@ -205,9 +207,13 @@ export const cvApi = {
   favorites: () =>
     api.get<Paginated<Cv> | Cv[]>("/cv/favorites").then(listOrPaginated),
   templates: () =>
-    api.get<{ data?: CvTemplate[] } | CvTemplate[]>("/cv/templates").then(
-      (r) => (Array.isArray(r) ? r : ((r as { data?: CvTemplate[] }).data ?? [])),
-    ),
+    api.get<unknown>("/cv/templates").then((r) => {
+      // The envelope is already unwrapped to `data`, which is
+      // `{ templates: [...] }`. Tolerate { templates }, { data }, or a bare array.
+      if (Array.isArray(r)) return r as CvTemplate[];
+      const o = (r ?? {}) as { templates?: CvTemplate[]; data?: CvTemplate[] };
+      return o.templates ?? o.data ?? [];
+    }),
 
   // GET /cv/{id} → { cv: Cv, display: unknown, latest_analysis: unknown, latest_score: unknown }
   get: (id: number) => api.get<{ cv: Cv; display?: unknown; latest_analysis?: unknown; latest_score?: unknown }>(`/cv/${id}`),

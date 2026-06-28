@@ -5,6 +5,7 @@ import axios, {
 } from "axios";
 import { ApiException, type ApiEnvelope } from "./types";
 import { clearToken, getToken } from "./session";
+import { useNetworkStore } from "@/stores/network.store";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
@@ -101,20 +102,27 @@ export function installRateLimitHandler(
 
 /** Unwraps the `{ result, data }` envelope and returns `data`. */
 export async function apiRequest<T>(config: AxiosRequestConfig): Promise<T> {
-  const res = await http.request<ApiEnvelope<T>>(config);
-  const body = res.data;
-  if (body && typeof body === "object" && "result" in body && !body.result) {
-    const err = body as Extract<ApiEnvelope<T>, { result: false }>;
-    throw new ApiException({
-      status: res.status,
-      code: err.code,
-      message: err.message,
-      fieldErrors: err.meta?.errors,
-      retryAfter: err.meta?.retry_after,
-    });
+  // Track in-flight requests for the global progress bar. inc() on send,
+  // dec() in finally so it always clears on success AND failure.
+  useNetworkStore.getState().inc();
+  try {
+    const res = await http.request<ApiEnvelope<T>>(config);
+    const body = res.data;
+    if (body && typeof body === "object" && "result" in body && !body.result) {
+      const err = body as Extract<ApiEnvelope<T>, { result: false }>;
+      throw new ApiException({
+        status: res.status,
+        code: err.code,
+        message: err.message,
+        fieldErrors: err.meta?.errors,
+        retryAfter: err.meta?.retry_after,
+      });
+    }
+    // Most endpoints nest under `data`; a few (e.g. /auth/me) are top-level.
+    return (body as { data?: T }).data ?? (body as T);
+  } finally {
+    useNetworkStore.getState().dec();
   }
-  // Most endpoints nest under `data`; a few (e.g. /auth/me) are top-level.
-  return (body as { data?: T }).data ?? (body as T);
 }
 
 export const api = {

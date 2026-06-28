@@ -131,9 +131,23 @@ export function BuildCvModal({ onClose }: { onClose: () => void }) {
                             {t.name}
                           </div>
                         )}
-                        <p className="py-2 text-center text-xs font-medium">
-                          {t.name}
-                        </p>
+                        <div className="px-2 pb-2 pt-2">
+                          <p className="text-center text-xs font-medium">{t.name}</p>
+                          {t.description && (
+                            <p className="mt-0.5 text-center text-[0.65rem] leading-snug text-muted line-clamp-2">
+                              {t.description}
+                            </p>
+                          )}
+                          {t.best_for?.length ? (
+                            <div className="mt-1.5 flex flex-wrap justify-center gap-1">
+                              {t.best_for.slice(0, 3).map((b) => (
+                                <span key={b} className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[0.55rem] font-medium text-brand">
+                                  {b}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
                       </button>
                     ))}
                   </div>

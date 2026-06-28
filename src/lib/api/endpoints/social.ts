@@ -85,6 +85,33 @@ function paged<T>(r: unknown, key?: string): { items: T[]; page: number; lastPag
   return { items: p.data ?? [], page: p.current_page ?? 1, lastPage: p.last_page ?? 1, total: p.total ?? p.data?.length ?? 0 };
 }
 
+export interface ShareUserRef {
+  id: number;
+  role: string;
+  display_name: string;
+  display_image?: string | null;
+  headline?: string | null;
+}
+
+export interface RepostShareEntry {
+  user: ShareUserRef;
+  comment?: string | null;
+  reposted_at: string;
+  post_id: number;
+}
+
+export interface DirectShareEntry {
+  user: ShareUserRef;
+  shared_at: string;
+}
+
+export interface PostSharesResponse {
+  breakdown: { total: number; reposts: number; direct: number; link: number };
+  // `reposts` is a Laravel paginator; entries live under `.data`.
+  reposts: { data?: RepostShareEntry[] } & Record<string, unknown>;
+  direct_shares: DirectShareEntry[];
+}
+
 export const socialApi = {
   feed: (page = 1) =>
     api.get<unknown>(`/posts?page=${page}`).then((r) => paged<Post>(r, "posts")),
@@ -136,9 +163,9 @@ export const socialApi = {
   shareCounts: (postId: number) =>
     api.get<{ total: number; reposts: number }>(`/posts/${postId}/shares`),
 
-  // GET /posts/{post}/shares/users — paginated list of users who reposted
+  // GET /posts/{post}/shares/users — breakdown + paginated reposts + direct shares
   shareUsers: (postId: number, perPage = 20) =>
-    api.get<{ total: number; reposts: unknown[] }>(`/posts/${postId}/shares/users?per_page=${perPage}`),
+    api.get<PostSharesResponse>(`/posts/${postId}/shares/users?per_page=${perPage}`),
 
   shareRepost: (postId: number, visibility: "public" | "connections" | "private", content?: string) =>
     api.post<{ post?: unknown }>(`/posts/${postId}/share`, {

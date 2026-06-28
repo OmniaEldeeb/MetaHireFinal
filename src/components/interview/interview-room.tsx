@@ -163,7 +163,7 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
                   />
                 </div>
               </div>
-              <Countdown minutes={currentQuestion.expected_time} running={isRecording} onExpire={isRecording ? onSubmit : undefined} />
+              <Countdown key={currentQuestion.question_id} minutes={currentQuestion.expected_time} running={isRecording} onExpire={isRecording ? onSubmit : undefined} />
             </div>
             {currentQuestion.greeting ? (
               <p className="mt-4 text-sm italic text-muted border-l-2 border-brand/40 pl-3">

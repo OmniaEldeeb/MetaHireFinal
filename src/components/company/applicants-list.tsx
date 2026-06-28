@@ -170,7 +170,21 @@ function ApplicantDrawer({ app, onClose }: { app: CompanyApplication; onClose: (
     }
   };
 
+  // The AI-interview invite endpoint only accepts applications still in the
+  // "pending" or "shortlisted" stage (others 422). Gate on the live local
+  // status so it updates the moment HR changes the stage in this drawer.
+  const canInviteAi = status === "pending" || status === "shortlisted";
+
   const invite = async (kind: "ai" | "final") => {
+    if (kind === "ai" && !canInviteAi) {
+      toast({
+        kind: "error",
+        title: "Update status first",
+        message:
+          "Set the candidate to Pending or Shortlisted before inviting to the AI interview.",
+      });
+      return;
+    }
     setInviting(kind);
     try {
       if (kind === "ai") await companyJobsApi.invite(app.id);
@@ -275,14 +289,21 @@ function ApplicantDrawer({ app, onClose }: { app: CompanyApplication; onClose: (
           {/* Actions */}
           <div className="space-y-2">
             <Button
-              className="w-full"
+              className={cn("w-full", !canInviteAi && "opacity-50")}
               variant="outline"
               onClick={() => invite("ai")}
               disabled={inviting !== null}
+              aria-disabled={!canInviteAi}
             >
               {inviting === "ai" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Invite to AI interview
             </Button>
+            {!canInviteAi && (
+              <p className="-mt-1 px-1 text-xs text-faint">
+                Set status to <span className="font-medium text-muted">Pending</span> or{" "}
+                <span className="font-medium text-muted">Shortlisted</span> to enable this.
+              </p>
+            )}
             <Button
               className="w-full"
               variant="outline"

@@ -26,6 +26,13 @@ export function Countdown({
 
   useEffect(() => {
     if (!running) return;
+    // Start the clock fresh every time recording begins — this covers a NEW
+    // question that happens to share the previous question's expected_time
+    // (so `total` didn't change), and re-recording the same question after a
+    // failed/aborted submit. Without this, `remaining` carries over (possibly
+    // already in the negative grace zone) and onExpire fires instantly,
+    // skipping the question.
+    setRemaining(total);
     const id = setInterval(() => {
       setRemaining((r) => {
         const next = r - 1;
@@ -39,7 +46,7 @@ export function Countdown({
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [running]);
+  }, [running, total]);
 
   const inGrace = remaining < 0;
   const graceRemaining = inGrace ? GRACE_SECONDS + remaining : 0; // counts 30→0

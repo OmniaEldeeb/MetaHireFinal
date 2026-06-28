@@ -283,13 +283,16 @@ export class InterviewOrchestrator {
     this.emit({ phase: "evaluating" });
     const audio = await this.recorder.stop();
 
-    // Nothing was captured — let the candidate re-record instead of failing the
-    // whole session.
-    if (!audio || audio.size === 0) {
+    // Nothing meaningful was captured — let the candidate re-record instead of
+    // submitting an empty/near-empty clip (which Whisper can't transcribe and
+    // which would waste a question). A valid WebM/Opus answer of even ~1s is
+    // several KB; a header-only or silent clip is well under 1.5 KB.
+    const MIN_AUDIO_BYTES = 1500;
+    if (!audio || audio.size < MIN_AUDIO_BYTES) {
       this.emit({
         phase: "questioning",
         submitError:
-          "We didn't capture any audio. Check your microphone and record your answer again.",
+          "We didn't capture your answer. Check your microphone and record again.",
       });
       return false;
     }

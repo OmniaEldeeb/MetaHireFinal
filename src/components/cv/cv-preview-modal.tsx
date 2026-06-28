@@ -16,11 +16,18 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, X, FileText, ExternalLink, Globe } from "lucide-react";
 import { cvApi, type Cv } from "@/lib/api/endpoints/cv";
 
-const FALLBACK_TEMPLATES = [
+// Same template set the Export modal offers, so Preview and Export match.
+// The /cv/templates API currently only reports 4 of these, so we use this list
+// as the base and merge in any *extra* templates the API may add in future.
+const TEMPLATES = [
+  { id: "ats", name: "ATS" },
   { id: "nova", name: "Nova" },
   { id: "meridian", name: "Meridian" },
   { id: "impact", name: "Impact" },
   { id: "executive", name: "Executive" },
+  { id: "harvard", name: "Harvard" },
+  { id: "hybrid", name: "Hybrid" },
+  { id: "corporate", name: "Corporate" },
 ];
 
 export function CvPreviewModal({ cv, onClose }: { cv: Cv; onClose: () => void }) {
@@ -39,7 +46,10 @@ export function CvPreviewModal({ cv, onClose }: { cv: Cv; onClose: () => void })
     queryFn: cvApi.templates,
     staleTime: 5 * 60 * 1000,
   });
-  const templateList = templates && templates.length ? templates : FALLBACK_TEMPLATES;
+  // Prefer the API list (rich: name + description + best_for). Fall back to the
+  // static 8 only if the request hasn't resolved or fails.
+  const templateList: { id: string; name: string; description?: string; best_for?: string[] }[] =
+    templates && templates.length ? templates : TEMPLATES;
 
   const [template, setTemplate] = useState<string>("");
   useEffect(() => {
@@ -57,6 +67,8 @@ export function CvPreviewModal({ cv, onClose }: { cv: Cv; onClose: () => void })
     const s = `${cv.original_filename ?? ""} ${cv.cv_url ?? ""}`.toLowerCase();
     return s.includes(".pdf");
   }, [cv.original_filename, cv.cv_url]);
+
+  const selectedTemplate = templateList.find((t) => t.id === template);
 
   return (
     <div
@@ -130,6 +142,30 @@ export function CvPreviewModal({ cv, onClose }: { cv: Cv; onClose: () => void })
             </a>
           )}
         </div>
+
+        {/* Selected template description (formatted mode) */}
+        {mode === "formatted" && selectedTemplate?.description && (
+          <div className="border-b border-line bg-surface px-6 py-2.5 shrink-0">
+            <p className="text-xs leading-relaxed text-muted">
+              {selectedTemplate.description}
+            </p>
+            {selectedTemplate.best_for?.length ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-faint">
+                  Best for
+                </span>
+                {selectedTemplate.best_for.map((b) => (
+                  <span
+                    key={b}
+                    className="rounded-full bg-brand-soft px-2 py-0.5 text-[0.65rem] font-medium text-brand"
+                  >
+                    {b}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-hidden bg-elevated">

@@ -7,7 +7,7 @@
  * No external dependency — avoids react-markdown install requirement.
  */
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 function parseMarkdown(md: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
@@ -111,28 +111,71 @@ function inlineMarkdown(text: string): React.ReactNode[] {
   return parts;
 }
 
+const COLLAPSED_MAX_PX = 240; // ~ a dozen lines before "See more" kicks in
+
 export function PostContent({
   content,
   contentFormat,
   className = "",
+  collapsible = false,
 }: {
   content?: string | null;
   contentFormat?: string | null;
   className?: string;
+  collapsible?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!collapsible) return;
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setOverflowing(el.scrollHeight > COLLAPSED_MAX_PX + 24);
+    check();
+    // Re-check if layout shifts (fonts, viewport width).
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [collapsible, content, contentFormat]);
+
   if (!content) return null;
 
-  if (contentFormat === "markdown") {
-    return (
-      <div className={`space-y-2 ${className}`}>
-        {parseMarkdown(content)}
-      </div>
+  const inner =
+    contentFormat === "markdown" ? (
+      <div className={`space-y-2 ${className}`}>{parseMarkdown(content)}</div>
+    ) : (
+      <p className={`whitespace-pre-line text-[0.95rem] leading-relaxed ${className}`}>
+        {content}
+      </p>
     );
-  }
+
+  if (!collapsible) return inner;
+
+  const clamp = !expanded; // applied only while collapsed; short content is unaffected
 
   return (
-    <p className={`whitespace-pre-line text-[0.95rem] leading-relaxed ${className}`}>
-      {content}
-    </p>
+    <div>
+      <div
+        ref={ref}
+        className="relative overflow-hidden"
+        style={{ maxHeight: clamp ? COLLAPSED_MAX_PX : undefined }}
+      >
+        {inner}
+        {clamp && overflowing && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-surface to-transparent" />
+        )}
+      </div>
+      {overflowing && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1 text-sm font-semibold text-brand hover:underline"
+        >
+          {expanded ? "See less" : "See more"}
+        </button>
+      )}
+    </div>
   );
 }
