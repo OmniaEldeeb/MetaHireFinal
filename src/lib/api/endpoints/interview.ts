@@ -135,8 +135,14 @@ export interface AnswerResult {
 
 export interface InterviewReport {
   interview_id?: number;
+  type?: string;
+  status?: string;
   target_role?: string;
+  target_company?: string;
   level?: string;
+  tech_stack?: string[];
+  experience_years?: number;
+  language?: string;
   technical_score?: number;
   communication_score?: number;
   tone_score?: number;
@@ -145,6 +151,8 @@ export interface InterviewReport {
   overall_feedback?: string;
   total_questions?: number;
   questions_answered?: number;
+  started_at?: string;
+  finished_at?: string;
   questions?: {
     question: string;
     question_number?: number;
@@ -311,8 +319,16 @@ function normalizeReport(raw: unknown): InterviewReport {
 
   return {
     interview_id: numOpt(r.interview_id),
+    type: str(r.type, r.interview_type),
+    status: str(r.status),
     target_role: str(r.target_role),
+    target_company: str(r.target_company),
     level: str(r.level),
+    tech_stack: Array.isArray(r.tech_stack)
+      ? (r.tech_stack as string[])
+      : undefined,
+    experience_years: numOpt(r.experience_years),
+    language: str(r.language),
     // Technical / answers score.
     technical_score: numOpt(r.technical_score),
     communication_score: numOpt(r.communication_score),
@@ -325,6 +341,8 @@ function normalizeReport(raw: unknown): InterviewReport {
     overall_feedback: str(r.overall_feedback, r.ai_feedback, r.summary),
     total_questions: numOpt(r.total_questions),
     questions_answered: numOpt(r.questions_answered),
+    started_at: str(r.started_at),
+    finished_at: str(r.finished_at),
     questions,
     recommendations: Array.isArray(r.recommendations)
       ? (r.recommendations as InterviewReport["recommendations"])

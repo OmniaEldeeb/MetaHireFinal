@@ -3,19 +3,31 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
-  Loader2, Mic, AudioWaveform, ScanFace,
-  MessagesSquare, TrendingUp, Lightbulb, ArrowRight,
+  Loader2, Mic, MessagesSquare, Lightbulb,
 } from "lucide-react";
 import { Container } from "@/components/ui/section";
 import { interviewApi, type InterviewReport } from "@/lib/api/endpoints/interview";
 import { cn } from "@/lib/utils";
+
+function fmtDate(value?: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function ScoreRing({
   score,
   label,
   color,
 }: {
-  score?: number;
+  score?: number | null;
   label: string;
   color: string;
 }) {
@@ -35,11 +47,24 @@ function ScoreRing({
         </svg>
         <div className="absolute inset-0 grid place-items-center">
           <span className="readout text-lg font-bold text-ink">
-            {score !== undefined ? score : "—"}
+            {score !== undefined && score !== null ? score : "—"}
           </span>
         </div>
       </div>
       <p className="text-xs text-muted">{label}</p>
+    </div>
+  );
+}
+
+/** A labelled value in the interview meta grid. Hidden if there's no value. */
+function Meta({ label, value }: { label: string; value?: React.ReactNode }) {
+  if (value === undefined || value === null || value === "") return null;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-faint">
+        {label}
+      </span>
+      <span className="text-sm text-ink">{value}</span>
     </div>
   );
 }
@@ -55,7 +80,7 @@ function QCard({
     <details className="group rounded-2xl border border-line bg-surface">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
         <span className="readout shrink-0 text-xs text-faint">
-          Q{index + 1}
+          Q{q.question_number ?? index + 1}
         </span>
         <p className="min-w-0 flex-1 truncate text-sm font-medium">{q.question}</p>
         <div className="flex shrink-0 items-center gap-2">
@@ -70,20 +95,17 @@ function QCard({
                   : "bg-coral/12 text-coral",
               )}
             >
-              {q.score}
+              {q.score} / 100
             </span>
           )}
           <svg className="h-4 w-4 text-faint transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="m9 18 6-6-6-6" /></svg>
         </div>
       </summary>
       <div className="space-y-3 px-5 pb-5">
-        {q.audio_url && (
-          <div>
-            <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-faint">Recording</p>
-            <audio controls preload="none" src={q.audio_url} className="h-9 w-full">
-              Your browser does not support audio playback.
-            </audio>
-          </div>
+        {q.expected_time !== undefined && (
+          <p className="text-[0.65rem] font-medium uppercase tracking-wider text-faint">
+            Expected time: {q.expected_time} min
+          </p>
         )}
         {q.transcript && (
           <div>
@@ -141,7 +163,8 @@ export function InterviewReport({ interviewId }: { interviewId: number }) {
     );
   }
 
-  const overall = data.overall_score ?? data.technical_score;
+  const started = fmtDate(data.started_at);
+  const finished = fmtDate(data.finished_at);
 
   return (
     <Container className="max-w-3xl py-8">
@@ -152,24 +175,45 @@ export function InterviewReport({ interviewId }: { interviewId: number }) {
             {data.target_role ?? "Interview"}
           </h1>
           {data.level && <p className="mt-0.5 text-sm capitalize text-muted">{data.level}</p>}
-          {data.total_questions ? (
-            <p className="mt-0.5 text-xs text-faint">
-              {data.questions_answered ?? data.questions?.length ?? 0} of {data.total_questions} questions answered
-            </p>
-          ) : null}
         </div>
         <Link href="/interviews" className="text-sm text-brand hover:underline">
           All interviews
         </Link>
       </div>
 
-      {/* Score overview */}
+      {/* Interview details */}
+      <div className="mt-6 grid grid-cols-2 gap-4 rounded-2xl border border-line bg-surface p-6 sm:grid-cols-3">
+        <Meta label="Type" value={data.type ? <span className="capitalize">{data.type}</span> : undefined} />
+        <Meta label="Status" value={data.status ? <span className="capitalize">{data.status.replace(/_/g, " ")}</span> : undefined} />
+        <Meta label="Target company" value={data.target_company} />
+        <Meta label="Level" value={data.level ? <span className="capitalize">{data.level}</span> : undefined} />
+        <Meta label="Experience" value={data.experience_years !== undefined ? `${data.experience_years} yrs` : undefined} />
+        <Meta label="Language" value={data.language ? data.language.toUpperCase() : undefined} />
+        <Meta label="Total questions" value={data.total_questions} />
+        <Meta label="Started" value={started} />
+        <Meta label="Finished" value={finished} />
+        {data.tech_stack?.length ? (
+          <div className="col-span-2 flex flex-col gap-1 sm:col-span-3">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-faint">
+              Tech stack
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {data.tech_stack.map((t) => (
+                <span key={t} className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand">
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Scores */}
       <div className="mt-6 grid place-items-center rounded-2xl border border-line bg-surface p-6">
         <div className="flex flex-wrap items-center justify-center gap-8">
-          <ScoreRing score={overall} label="Overall" color="rgb(var(--accent))" />
-          <ScoreRing score={data.technical_score} label="Answers" color="rgb(var(--accent))" />
-          <ScoreRing score={data.tone_score} label="Tone" color="rgb(var(--amber))" />
-          <ScoreRing score={data.face_score} label="Expression" color="rgb(var(--green))" />
+          <ScoreRing score={data.communication_score} label="Communication" color="rgb(var(--amber))" />
+          <ScoreRing score={data.technical_score} label="Technical" color="rgb(var(--accent))" />
+          <ScoreRing score={data.overall_score} label="Final" color="rgb(var(--green))" />
         </div>
         {data.overall_feedback && (
           <p className="mt-5 max-w-xl text-center text-sm leading-relaxed text-muted">
@@ -188,35 +232,6 @@ export function InterviewReport({ interviewId }: { interviewId: number }) {
           <div className="space-y-3">
             {data.questions.map((q, i) => (
               <QCard key={i} q={q} index={i} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* Recommendations */}
-      {data.recommendations?.length ? (
-        <section className="mt-6">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold tracking-tight">
-            <TrendingUp className="h-5 w-5 text-brand" />
-            Recommendations
-          </h2>
-          <div className="space-y-3">
-            {data.recommendations.map((r, i) => (
-              <div key={i} className="rounded-2xl border border-line bg-surface p-5">
-                <p className="text-sm font-semibold">{r.topic}</p>
-                <p className="mt-1 text-sm text-muted">{r.reason}</p>
-                {r.resources?.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {r.resources.map((res, j) => (
-                      <a key={j} href={res.startsWith("http") ? res : undefined}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-brand hover:underline">
-                        {res} <ArrowRight className="h-3 w-3" />
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
             ))}
           </div>
         </section>

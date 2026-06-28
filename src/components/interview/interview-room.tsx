@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   Mic, MicOff, CheckCircle2, Loader2,
-  MessagesSquare, Lightbulb, BookOpen,
   Volume2, VolumeX, RotateCcw, AlertCircle, ScanFace,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ interface Props {
 }
 
 export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: Props) {
-  const { phase, currentQuestion, lastAnswer, language } = state;
+  const { phase, currentQuestion, language } = state;
   const isRecording = phase === "recording";
   const isEvaluating = phase === "evaluating";
   const isQuestioning = phase === "questioning";
@@ -124,7 +123,7 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
         {/* Candidate camera — self-view, always visible (like a video call).
             This is the single <video> bound to videoRef; the orchestrator uses
             it to stream face frames, so it lives here and nowhere else. */}
-        <div className="absolute bottom-4 right-4 aspect-[4/3] w-32 overflow-hidden rounded-xl border border-white/20 bg-bg-3 shadow-lg sm:w-44">
+        <div className="absolute bottom-4 left-4 aspect-[4/3] w-32 overflow-hidden rounded-xl border border-white/20 bg-bg-3 shadow-lg sm:w-44">
           <video
             ref={videoRef}
             autoPlay
@@ -258,42 +257,10 @@ export function InterviewRoom({ state, videoRef, onStartRecording, onSubmit }: P
           ) : null}
         </div>
 
-        {/* Per-answer feedback */}
-        {lastAnswer && !lastAnswer.interview_complete && (
-          <div className="space-y-3">
-            <div className="rounded-2xl border border-line bg-surface p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <MessagesSquare className="h-4 w-4 text-brand" /> Previous answer
-                </h3>
-                {lastAnswer.answer_score !== undefined && (
-                  <span className="readout rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-bold text-brand">
-                    {lastAnswer.answer_score} / 100
-                  </span>
-                )}
-              </div>
-              {lastAnswer.transcript && (
-                <p className="mt-3 text-sm italic text-muted">
-                  &ldquo;{lastAnswer.transcript.slice(0, 200)}{lastAnswer.transcript.length > 200 ? "…" : ""}&rdquo;
-                </p>
-              )}
-              {lastAnswer.answer_feedback && (
-                <p className="mt-3 flex items-start gap-2 text-sm text-muted">
-                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
-                  {lastAnswer.answer_feedback}
-                </p>
-              )}
-            </div>
-            {lastAnswer.ideal_answer && (
-              <details className="rounded-2xl border border-line bg-surface">
-                <summary className="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
-                  <BookOpen className="h-4 w-4 text-faint" /> See ideal answer
-                </summary>
-                <p className="px-5 pb-4 text-sm leading-relaxed text-muted">{lastAnswer.ideal_answer}</p>
-              </details>
-            )}
-          </div>
-        )}
+        {/* Per-answer feedback is intentionally hidden DURING the interview —
+            showing a score / ideal answer mid-interview is unrealistic and can
+            rattle the candidate. All of it is available afterwards in the
+            report (interview-report.tsx). */}
       </div>
 
       {/* Right — signals */}

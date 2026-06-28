@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Mic, ScanFace, AudioWaveform } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { SkillsInput } from "@/components/profile/skills-input";
 import { LANGUAGE } from "@/lib/constants/enums";
 import { EXPERIENCE_LEVEL_LABELS } from "@/lib/constants/labels";
+import { cvApi } from "@/lib/api/endpoints/cv";
 import type { StartSessionBody } from "@/lib/api/endpoints/interview";
 
 // The AI interview backend accepts only these four levels.
@@ -22,6 +24,7 @@ interface SetupValues {
   target_company: string;
   job_description_text: string;
   tech_stack: string[];
+  cv_id: string;
 }
 
 const selectCls = "h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-brand";
@@ -38,6 +41,7 @@ export function InterviewSetup({
   onStart: (body: StartSessionBody) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const { data: cvs } = useQuery({ queryKey: ["my-cvs"], queryFn: cvApi.list });
   const { register, control, handleSubmit, formState: { errors } } = useForm<SetupValues>({
     defaultValues: {
       target_role: "",
@@ -48,6 +52,7 @@ export function InterviewSetup({
       target_company: "",
       job_description_text: "",
       tech_stack: [],
+      cv_id: "",
     },
   });
 
@@ -62,6 +67,7 @@ export function InterviewSetup({
       total_questions: Number(v.total_questions) as 5 | 10 | 15,
       target_company: v.target_company || undefined,
       job_description_text: v.job_description_text || undefined,
+      cv_id: v.cv_id ? Number(v.cv_id) : undefined,
     });
   };
 
@@ -129,6 +135,17 @@ export function InterviewSetup({
           <Controller control={control} name="tech_stack" rules={{ validate: (v) => v.length > 0 || "Add at least one technology" }}
             render={({ field }) => <SkillsInput value={field.value} onChange={field.onChange} />} />
           {errors.tech_stack && <p className="mt-1 text-xs text-coral">{errors.tech_stack.message as string}</p>}
+        </Field>
+
+        <Field label="Use one of your CVs" htmlFor="cv_id" optional hint="Tailors questions to your CV. Leave as default to use your latest CV automatically.">
+          <select id="cv_id" className={selectCls} {...register("cv_id")}>
+            <option value="">Latest CV (automatic)</option>
+            {(cvs ?? []).map((cv) => (
+              <option key={cv.id} value={cv.id}>
+                {cv.name || cv.original_filename || `CV #${cv.id}`}
+              </option>
+            ))}
+          </select>
         </Field>
 
         <Field label="Paste job description" htmlFor="jd" optional hint="Tailors questions to the actual role.">

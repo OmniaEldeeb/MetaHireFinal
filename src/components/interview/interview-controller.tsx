@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { InterviewSetup } from "./interview-setup";
 import { InterviewRoom } from "./interview-room";
+import { InterviewClosing } from "./interview-closing";
 import { InterviewOrchestrator, type OrchestratorState } from "@/lib/interview/orchestrator";
 import type { StartSessionBody } from "@/lib/api/endpoints/interview";
 import { createEcho, type EchoLike } from "@/lib/realtime/echo";
@@ -41,12 +42,15 @@ export function InterviewController({
   }, []);
 
   // Navigate to report when the orchestrator reaches "done" (either via the
-  // HTTP finish path in finalize(), or via the .interview.finished WS event).
+  // HTTP finish path in finalize(), or via the .interview.finished WS event) —
+  // but only once the closing avatar has finished speaking (closingDone), so
+  // the goodbye message isn't cut off.
+  const [closingDone, setClosingDone] = useState(false);
   useEffect(() => {
-    if (orchState?.phase === "done" && orchState.interviewId) {
+    if (orchState?.phase === "done" && orchState.interviewId && closingDone) {
       router.push(`/interviews/${orchState.interviewId}/report`);
     }
-  }, [orchState?.phase, orchState?.interviewId, router]);
+  }, [orchState?.phase, orchState?.interviewId, closingDone, router]);
 
   // Wire the interview.{id} WebSocket channel once we have an interviewId and
   // the session is active (questioning/recording/evaluating/finishing).
@@ -194,12 +198,11 @@ export function InterviewController({
 
   if (phase === "finishing" || phase === "done") {
     return (
-      <div className="grid min-h-[60vh] place-items-center">
-        <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand" />
-          <p className="mt-3 text-sm text-muted">Generating your report…</p>
-        </div>
-      </div>
+      <InterviewClosing
+        message={orchState?.lastAnswer?.overall_feedback}
+        language={orchState?.language}
+        onSpeechEnd={() => setClosingDone(true)}
+      />
     );
   }
 

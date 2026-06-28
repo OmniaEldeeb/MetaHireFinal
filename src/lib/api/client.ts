@@ -9,6 +9,19 @@ import { clearToken, getToken } from "./session";
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
+// Interview microservice base URL. The tone/face/interview-session endpoints
+// were split out into a separate service; everything else (auth, CVs, jobs,
+// AI Q&A) stays on the main backend. Falls back to the main URL if unset, so
+// nothing breaks when the env var is missing.
+const MICRO_BASE_URL =
+  process.env.NEXT_PUBLIC_INTERVIEW_API_BASE_URL ?? BASE_URL;
+
+// Any request whose path starts with one of these is routed to the
+// microservice. NOTE: "/ai-interview" intentionally does NOT match
+// "/interview" (different prefix), so the AI Q&A endpoints remain on the main
+// backend. "/interviews" (the list) does match and is on the microservice.
+const MICRO_PREFIXES = ["/tone-interview", "/face-interview", "/interview"];
+
 export const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -21,6 +34,13 @@ export const http: AxiosInstance = axios.create({
 http.interceptors.request.use((config) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // Send interview-microservice paths to the microservice base URL. Other
+  // requests keep the instance default (main backend).
+  const url = config.url ?? "";
+  if (MICRO_PREFIXES.some((p) => url.startsWith(p))) {
+    config.baseURL = MICRO_BASE_URL;
+  }
   return config;
 });
 
