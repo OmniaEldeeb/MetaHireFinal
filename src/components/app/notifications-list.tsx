@@ -10,6 +10,7 @@ import {
 import { NotificationSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useNotificationsStore } from "@/stores/notifications.store";
+import { useAuthStore } from "@/stores/auth.store";
 import { notificationsApi } from "@/lib/api/endpoints/notifications";
 
 function timeAgo(iso: string): string {
@@ -30,6 +31,7 @@ export function NotificationsList({
   onNavigate?: () => void;
 }) {
   const items = useNotificationsStore((s) => s.items);
+  const role = useAuthStore((s) => s.role);
   const loaded = useNotificationsStore((s) => s.loaded);
   const unread = useNotificationsStore((s) => s.unreadCount);
   const setItems = useNotificationsStore((s) => s.setItems);
@@ -92,11 +94,14 @@ export function NotificationsList({
       ) : (
         <ul className={cn("divide-y divide-line", compact && "max-h-96 overflow-auto")}>
           {shown.map((n) => {
-            // Determine href from notification data for navigation
+            // Determine href from notification data for navigation.
+            // Company users must land on company views — the candidate
+            // applications page calls /candidate/applications and 403s for them.
             const d = n.data ?? {};
+            const isCompany = role === "company";
             let href: string | undefined;
-            if (d.application_id) href = "/applications";
-            else if (d.job_id) href = `/jobs/${d.job_id}`;
+            if (d.application_id) href = isCompany ? "/company/applications" : "/applications";
+            else if (d.job_id) href = isCompany ? `/company/jobs/${d.job_id}` : `/jobs/${d.job_id}`;
             else if (d.conversation_id) href = "/messages";
             else if (d.connection_id) href = "/network";
 

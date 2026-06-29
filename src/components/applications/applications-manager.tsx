@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Loader2,
@@ -29,8 +30,8 @@ import {
   WORK_MODEL_LABELS,
 } from "@/lib/constants/labels";
 import type { ApplicationStatus, WorkType, WorkModel } from "@/lib/constants/enums";
+import { useAuthStore } from "@/stores/auth.store";
 import { cn, imgUrl } from "@/lib/utils";
-import { useToastStore } from "@/stores/toast.store";
 
 function StatusBadge({ status }: { status?: ApplicationStatus }) {
   if (!status) return null;
@@ -299,15 +300,36 @@ function ApplicationDrawer({
 }
 
 export function ApplicationsManager() {
+  const router = useRouter();
+  const role = useAuthStore((s) => s.role);
+  const isCandidate = role === "candidate";
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Application | null>(null);
+
+  // This page is candidate-only. If a company user lands here (e.g. via an old
+  // link), send them to the company applications view instead of calling the
+  // candidate endpoint, which 403s for them.
+  useEffect(() => {
+    if (role && role !== "candidate") router.replace("/company/applications");
+  }, [role, router]);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["applications", page],
     queryFn: () => candidateApplicationsApi.list(page),
+    enabled: isCandidate,
   });
 
   const { items, lastPage, total } = normalizeApplications(data);
+
+  if (!isCandidate) {
+    return (
+      <Container className="py-8">
+        <div className="grid place-items-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-brand" />
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container className="py-8">

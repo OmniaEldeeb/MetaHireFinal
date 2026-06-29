@@ -358,7 +358,7 @@ export const interviewApi = {
       level: normalizeInterviewLevel(body.level),
     }),
   finish: (id: number) =>
-    api.post<unknown>(`/interview/${id}/finish`),
+    api.post<unknown>(`/v2/interview/${id}/finish`),
   linkTone: (id: number, tone_interview_id: number) =>
     api.post<unknown>(`/interview/${id}/link-tone`, { tone_interview_id }),
   linkFace: (id: number, face_interview_id: number) =>
